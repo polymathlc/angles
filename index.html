@@ -4051,11 +4051,15 @@ updateStatus();
 
   function rectDiagonalFigure(a, unknownLabel) {
     const W = 360, Hh = 240;
-    const x0 = 70, y0 = 55, w = 220, h = 130;
+    // size the rectangle so the diagonal from A (TL) to C (BR) makes exactly
+    // angle `a` with the top side: tan(a) = h / w. Cap to fit the viewBox.
+    let w = 240, h = w * Math.tan(a * Math.PI / 180);
+    if (h > 150) { h = 150; w = h / Math.tan(a * Math.PI / 180); }
+    const x0 = Math.round((W - w) / 2), y0 = Math.round((Hh - h) / 2) - 4;
     let s = svgOpen(W, Hh);
-    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${w}" height="${h}"/>`;
+    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${fmt(w)}" height="${fmt(h)}"/>`;
     // diagonal from A (TL) to C (BR)
-    s += `<line class="fig-line-secondary" x1="${x0}" y1="${y0}" x2="${x0+w}" y2="${y0+h}"/>`;
+    s += `<line class="fig-line-secondary" x1="${x0}" y1="${y0}" x2="${fmt(x0+w)}" y2="${fmt(y0+h)}"/>`;
     s += rightAngleMark(x0, y0, 0, 90, 14);
     // angle a between top side (dir 0) and diagonal at A
     const diagAng = Math.atan2(h, w) * 180 / Math.PI;
@@ -4341,25 +4345,24 @@ updateStatus();
   }
 
   function intersectFigure(known, unknown, mode) {
-    const W = 380, Hh = 250, cx = 190, cy = 125, len = 130;
-    // line 1 horizontal-ish, line 2 at angle theta
-    const theta = 35; // degrees of the slanted line above horizontal
+    const W = 380, Hh = 250, cx = 190, cy = 125, len = 115;
     let s = svgOpen(W, Hh);
     // horizontal line
     s += `<line class="fig-line" x1="${cx-len}" y1="${cy}" x2="${cx+len}" y2="${cy}"/>`;
-    // slanted line
-    const dx = len * Math.cos(theta * Math.PI / 180);
-    const dy = len * Math.sin(theta * Math.PI / 180);
-    s += `<line class="fig-line" x1="${fmt(cx-dx)}" y1="${fmt(cy+dy)}" x2="${fmt(cx+dx)}" y2="${fmt(cy-dy)}"/>`;
-    // Four sectors: top (between +x going to slant up-right) etc.
-    // Known angle = top sector between horizontal-right (0) and slant up-right (theta).
-    s += angleMarker(cx, cy, 30, 0, -theta, known + '°', { labelR: 48 });
+    // second line crossing so the KNOWN angle (between horizontal-right and the
+    // slant going up) equals `known`. Screen y is flipped, so "up" is negative.
+    const ux = Math.cos(-known * Math.PI / 180), uy = Math.sin(-known * Math.PI / 180);
+    s += `<line class="fig-line" x1="${fmt(cx-len*ux)}" y1="${fmt(cy-len*uy)}" x2="${fmt(cx+len*ux)}" y2="${fmt(cy+len*uy)}"/>`;
+    // Known angle = top-right sector, between horizontal-right (0) and slant-up (-known).
+    s += angleMarker(cx, cy, 28, 0, -known, known + '°', { labelR: 46 });
     if (mode === 'vertical') {
-      // vertically opposite = bottom-left sector: between horizontal-left (180) and slant down-left (180+theta)
-      s += angleMarker(cx, cy, 30, 180, 180 + theta, unknown, { unknown: true, labelR: 48 });
+      // vertically opposite = bottom-left sector, diametrically across the crossing:
+      // between horizontal-left (180) and slant-down (180-known). Same size as known.
+      s += angleMarker(cx, cy, 28, 180, 180 - known, unknown, { unknown: true, labelR: 46 });
     } else {
-      // adjacent = top-left sector: between slant up-right (-theta i.e. up) ... use between horizontal-left(180) and slant up-right boundary
-      s += angleMarker(cx, cy, 38, -theta, -180, unknown, { unknown: true, labelR: 56 });
+      // adjacent (supplementary) = top-left sector: between slant-up (-known) and
+      // horizontal-left (-180). Size 180-known.
+      s += angleMarker(cx, cy, 34, -known, -180, unknown, { unknown: true, labelR: 54 });
     }
     s += pointDot(cx, cy);
     s += svgClose();
@@ -4477,12 +4480,26 @@ updateStatus();
   }
 
   function parallelogramFigure(known, mode) {
-    const W = 380, Hh = 230, x0 = 70, y0 = 50, w = 200, h = 120, slant = 50;
-    // vertices: A bottom-left, B bottom-right, C top-right, D top-left (slanted)
-    const A = { x: x0, y: y0 + h };
-    const B = { x: x0 + w, y: y0 + h };
-    const C = { x: x0 + w + slant, y: y0 };
-    const D = { x: x0 + slant, y: y0 };
+    const W = 380, Hh = 230;
+    // Build a parallelogram whose bottom-left interior angle (at A) equals `known`,
+    // so the drawn corner matches its label. A=bottom-left, B=bottom-right,
+    // C=top-right, D=top-left. Sides AB horizontal, AD slanted up by `known`.
+    const base = 165, leg = 115;
+    const k = known * Math.PI / 180;
+    // math coords (y up): A at origin
+    const pm = {
+      A: { x: 0, y: 0 },
+      B: { x: base, y: 0 },
+      C: { x: base + leg * Math.cos(k), y: leg * Math.sin(k) },
+      D: { x: leg * Math.cos(k), y: leg * Math.sin(k) }
+    };
+    const xs = [pm.A.x, pm.B.x, pm.C.x, pm.D.x], ys = [pm.A.y, pm.B.y, pm.C.y, pm.D.y];
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const scale = Math.min(250 / (maxX - minX), 150 / (maxY - minY));
+    const dW = (maxX - minX) * scale, dH = (maxY - minY) * scale;
+    const offX = (W - dW) / 2, offY = (Hh - dH) / 2;
+    const map = p => ({ x: offX + (p.x - minX) * scale, y: offY + (maxY - p.y) * scale });
+    const A = map(pm.A), B = map(pm.B), C = map(pm.C), D = map(pm.D);
     let s = svgOpen(W, Hh);
     s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}"/>`;
     s += parallelMarks(A.x, A.y, B.x, B.y, 1);
@@ -4572,8 +4589,26 @@ updateStatus();
   }
 
   function rhombusFigure(known, mode) {
-    const W = 360, Hh = 250, cx = 180, cy = 125, hw = 110, hh = 85;
-    const v = rhombusVerts(cx, cy, hw, hh);
+    const W = 360, Hh = 250;
+    // Build a rhombus whose LEFT (and right) vertex angle equals `known`, so the
+    // drawn corner matches its label. Each side from the left vertex makes
+    // ±known/2 with the horizontal, giving an interior angle of `known` there.
+    const side = 130, half = (known / 2) * Math.PI / 180;
+    const hx = side * Math.cos(half), hy = side * Math.sin(half);
+    // math coords (y up): left vertex at origin
+    const pm = {
+      left: { x: 0, y: 0 },
+      top: { x: hx, y: hy },
+      right: { x: 2 * hx, y: 0 },
+      bottom: { x: hx, y: -hy }
+    };
+    const xs = [0, 2 * hx], ys = [hy, -hy];
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const scale = Math.min(250 / (maxX - minX), 170 / (maxY - minY));
+    const dW = (maxX - minX) * scale, dH = (maxY - minY) * scale;
+    const offX = (W - dW) / 2, offY = (Hh - dH) / 2;
+    const map = p => ({ x: offX + (p.x - minX) * scale, y: offY + (maxY - p.y) * scale });
+    const v = { top: map(pm.top), right: map(pm.right), bottom: map(pm.bottom), left: map(pm.left) };
     let s = svgOpen(W, Hh);
     s += `<polygon class="fig-shape" points="${v.top.x},${v.top.y} ${v.right.x},${v.right.y} ${v.bottom.x},${v.bottom.y} ${v.left.x},${v.left.y}"/>`;
     // all four sides single tick (equal)
@@ -4648,13 +4683,31 @@ updateStatus();
     };
   }
 
+  // Build a triangle (screen coords) whose interior angles are exactly angA at
+  // the bottom-left vertex A and angB at the bottom-right vertex B, with the apex
+  // C above. The shape is scaled/centred to fill the given box so the drawn
+  // angles match their labels. Base AB is horizontal at the bottom of the box.
+  function triFromAngles(angA, angB, bx0, by0, bw, bh) {
+    const ta = Math.tan(angA * Math.PI / 180), tb = Math.tan(angB * Math.PI / 180);
+    // math coords (y up), base A(0,0)->B(1,0); apex where the two rays meet
+    const cxm = tb / (ta + tb), cym = ta * cxm;
+    const xs = [0, 1, cxm], ys = [0, 0, cym];
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const scale = Math.min(bw / (maxX - minX), bh / (maxY - minY));
+    const dW = (maxX - minX) * scale, dH = (maxY - minY) * scale;
+    const offX = bx0 + (bw - dW) / 2, offY = by0 + (bh - dH) / 2;
+    const map = (mx, my) => ({ x: offX + (mx - minX) * scale, y: offY + (maxY - my) * scale });
+    return { A: map(0, 0), B: map(1, 0), C: map(cxm, cym) };
+  }
+
   // generic triangle: angles at bottom-left (A), bottom-right (B), apex (C)
   function triangleFigure(angA, angB, angC, blankMarks) {
     const W = 360, Hh = 240;
-    const A = { x: 60, y: 190 }, B = { x: 300, y: 190 };
-    // apex placed using angle A to look plausible
-    const apexX = 150, apexY = 50;
-    const C = { x: apexX, y: apexY };
+    // Construct from the two base angles; the apex is then 180-angA-angB, which
+    // is exactly the unknown 'x' in the angle-sum question, so labels match.
+    const t = triFromAngles(angA, angB, 55, 45, 250, 150);
+    const A = t.A, B = t.B, C = t.C;
     let s = svgOpen(W, Hh);
     s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
     function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
@@ -4672,17 +4725,23 @@ updateStatus();
 
   function triangleExteriorFigure(angA, angB) {
     const W = 400, Hh = 240;
-    const A = { x: 70, y: 180 }, B = { x: 270, y: 180 }, C = { x: 150, y: 55 };
+    // The exterior angle x is at B. By the exterior-angle theorem it equals the
+    // sum of the two REMOTE interior angles, which are the ones given: angA (at A)
+    // and angB (at the apex C). So the interior angle at B is 180-angA-angB.
+    const intB = 180 - angA - angB;
+    const t = triFromAngles(angA, intB, 55, 45, 200, 150);
+    const A = t.A, B = t.B, C = t.C;
     let s = svgOpen(W, Hh);
     s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
     // extend base beyond B to the right
-    const ext = { x: 360, y: 180 };
-    s += `<line class="fig-line" x1="${B.x}" y1="${B.y}" x2="${ext.x}" y2="${ext.y}"/>`;
+    const extX = Math.min(W - 18, B.x + 110);
+    s += `<line class="fig-line" x1="${fmt(B.x)}" y1="${fmt(B.y)}" x2="${fmt(extX)}" y2="${fmt(B.y)}"/>`;
     function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    // given interior angles at the two remote vertices A and apex C
     s += angleMarker(A.x, A.y, 28, dirTo(A, B), dirTo(A, C), angA + '°', { labelR: 46 });
-    s += angleMarker(B.x, B.y, 28, dirTo(B, C), dirTo(B, A), angB + '°', { labelR: 46 });
-    // exterior at B between BC and the extension (dir 0)
-    s += angleMarker(B.x, B.y, 34, 0, dirTo(B, C), 'x', { unknown: true, labelR: 52 });
+    s += angleMarker(C.x, C.y, 26, dirTo(C, A), dirTo(C, B), angB + '°', { labelR: 44 });
+    // exterior x at B between the base extension (dir 0) and BC
+    s += angleMarker(B.x, B.y, 32, 0, dirTo(B, C), 'x', { unknown: true, labelR: 50 });
     s += pointLabel(A.x - 16, A.y + 6, 'A') + pointLabel(B.x - 4, B.y + 18, 'B') + pointLabel(C.x - 6, C.y - 10, 'C');
     s += svgClose();
     return s;
