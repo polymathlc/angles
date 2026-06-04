@@ -1,0 +1,5275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Polymath — Interactive Shape Manipulator</title>
+<style>
+  /* ============================================================
+     POLYMATH DESIGN SYSTEM — Geometry (purple accent)
+     ============================================================ */
+  :root {
+    --color-bg: #FAFAFA;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #555555;
+    --color-text-muted: #888888;
+    --color-border-light: #ECECEC;
+    --color-border-medium: #DDDDDD;
+
+    --accent-geometry: #9575CD;
+    --accent-geometry-light: #D1C4E9;
+    --accent-geometry-lighter: #EDE7F6;
+    --accent-geometry-dark: #7E57C2;
+
+    --accent-math: #66BB6A;
+    --accent-math-light: #C8E6C9;
+    --accent-math-lighter: #E8F5E9;
+    --accent-science: #42A5F5;
+    --accent-science-light: #BBDEFB;
+    --accent-coral: #EF9A9A;
+    --accent-coral-light: #FFCDD2;
+    --accent-orange: #FFB74D;
+    --accent-orange-light: #FFE0B2;
+    --accent-yellow: #FFD54F;
+    --accent-yellow-light: #FFF9C4;
+
+    --diagonal-color: #E57373;
+    --diagonal-color-light: #FFCDD2;
+    --protractor-color: #FB8C00;
+    --protractor-color-light: #FFE0B2;
+
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-button: 0 1px 2px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-button-hover: 0 2px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.12);
+    --shadow-modal: 0 4px 6px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.10);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 36px;
+    --space-2xl: 56px;
+
+    --font-base: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;
+    --font-numerals: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: var(--font-base);
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    animation: pageFadeIn 0.5s ease-out;
+  }
+
+  @keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .numerals,
+  .angle-label,
+  .side-length,
+  .info-value,
+  .palette-button-shortcut,
+  .protractor-tick-label,
+  .protractor-reading,
+  .diagonal-label,
+  .characteristic-value {
+    font-family: var(--font-numerals);
+  }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  .polymath-header {
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-light);
+    padding: var(--space-md) var(--space-xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .polymath-logo {
+    height: 60px;
+    width: auto;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-medium);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-button);
+  }
+
+  .icon-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+    color: var(--accent-geometry-dark);
+    border-color: var(--accent-geometry-light);
+  }
+
+  .icon-button:active {
+    transform: translateY(0.5px);
+  }
+
+  .icon-button.active {
+    background-color: var(--accent-geometry);
+    color: white;
+    border-color: var(--accent-geometry);
+  }
+
+  .icon-button.active:hover {
+    background-color: var(--accent-geometry-dark);
+    color: white;
+  }
+
+  .icon-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ============================================================
+     TITLE BANNER
+     ============================================================ */
+  .title-banner {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md) var(--space-md);
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  .title-banner h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: var(--space-sm);
+    color: var(--color-text-primary);
+  }
+
+  .title-banner .subtitle {
+    font-size: 1.05rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* ============================================================
+     MAIN LAYOUT — workspace + side palette
+     ============================================================ */
+  .main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-xl) var(--space-2xl);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  @media (max-width: 900px) {
+    .main-content {
+      grid-template-columns: 1fr;
+      padding: var(--space-md);
+    }
+  }
+
+  /* ============================================================
+     SHAPE PALETTE (LEFT)
+     ============================================================ */
+  .shape-palette {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-card);
+    height: fit-content;
+    position: sticky;
+    top: 110px;
+  }
+
+  .palette-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+  }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+
+  .palette-button {
+    background-color: var(--color-surface);
+    border: 1.5px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-sm);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-button);
+  }
+
+  .palette-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+    border-color: var(--accent-geometry-light);
+    background-color: var(--accent-geometry-lighter);
+  }
+
+  .palette-button:active {
+    transform: translateY(0.5px);
+  }
+
+  .palette-button svg {
+    width: 40px;
+    height: 40px;
+    stroke: var(--accent-geometry-dark);
+    fill: var(--accent-geometry-lighter);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+
+  .palette-button-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.01em;
+  }
+
+  .palette-divider {
+    height: 1px;
+    background-color: var(--color-border-light);
+    margin: var(--space-md) 0;
+  }
+
+  .palette-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .action-button {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-medium);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-family: var(--font-base);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-button);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+  }
+
+  .action-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+  }
+
+  .action-button.danger:hover {
+    color: #C62828;
+    border-color: var(--accent-coral);
+    background-color: #FFEBEE;
+  }
+
+  .action-button.primary {
+    background-color: var(--accent-geometry);
+    color: white;
+    border-color: var(--accent-geometry);
+  }
+
+  .action-button.primary:hover {
+    background-color: var(--accent-geometry-dark);
+    border-color: var(--accent-geometry-dark);
+  }
+
+  .action-button.protractor-toggle {
+    background-color: var(--protractor-color-light);
+    border-color: var(--protractor-color);
+    color: var(--protractor-color);
+  }
+
+  .action-button.protractor-toggle.active {
+    background-color: var(--protractor-color);
+    color: white;
+  }
+
+  /* Toggle row */
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    background-color: var(--color-border-medium);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .toggle-switch.active {
+    background-color: var(--accent-geometry);
+  }
+
+  .toggle-switch.active::after {
+    transform: translateX(16px);
+  }
+
+  /* ============================================================
+     CANVAS WORKSPACE (RIGHT)
+     ============================================================ */
+  .workspace {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    min-height: 620px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .workspace-header {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--color-bg);
+  }
+
+  .workspace-status {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-math);
+  }
+
+  .status-dot.idle {
+    background-color: var(--color-text-muted);
+  }
+
+  .workspace-info {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-numerals);
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    background-image:
+      linear-gradient(to right, rgba(149, 117, 205, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(149, 117, 205, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+    overflow: hidden;
+  }
+
+  #canvas-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  .canvas-empty-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--color-text-muted);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .canvas-empty-hint .big-emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+  }
+
+  .canvas-empty-hint p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    max-width: 320px;
+  }
+
+  /* ============================================================
+     SHAPE STYLING (SVG)
+     ============================================================ */
+  .shape-fill {
+    fill: var(--accent-geometry-lighter);
+    fill-opacity: 0.55;
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    transition: fill-opacity 0.2s ease, stroke-width 0.2s ease;
+  }
+
+  .shape-group.selected .shape-fill {
+    fill-opacity: 0.75;
+    stroke-width: 3;
+  }
+
+  .shape-group {
+    cursor: move;
+  }
+
+  .vertex-handle {
+    fill: white;
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2.5;
+    cursor: grab;
+    transition: r 0.15s ease, fill 0.15s ease;
+  }
+
+  .vertex-handle:hover {
+    fill: var(--accent-geometry-light);
+    r: 10;
+  }
+
+  .vertex-handle.dragging {
+    cursor: grabbing;
+    fill: var(--accent-geometry);
+    r: 11;
+  }
+
+  .angle-arc {
+    fill: none;
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 1.5;
+    stroke-opacity: 0.65;
+  }
+
+  .angle-label-bg {
+    fill: white;
+    stroke: var(--accent-geometry-light);
+    stroke-width: 1;
+  }
+
+  .angle-label {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--accent-geometry-dark);
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .side-length {
+    font-size: 11px;
+    font-weight: 500;
+    fill: var(--color-text-secondary);
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .side-length-bg {
+    fill: white;
+    fill-opacity: 0.85;
+  }
+
+  .right-angle-marker {
+    fill: none;
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 1.5;
+    stroke-opacity: 0.7;
+  }
+
+  .equal-mark {
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .parallel-mark {
+    fill: var(--accent-geometry-dark);
+  }
+
+  /* === Diagonals === */
+  .diagonal-line {
+    stroke: var(--diagonal-color);
+    stroke-width: 1.75;
+    stroke-dasharray: 6 4;
+    fill: none;
+    stroke-opacity: 0.85;
+  }
+
+  .diagonal-midpoint {
+    fill: var(--diagonal-color);
+    stroke: white;
+    stroke-width: 1.5;
+  }
+
+  .diagonal-label-bg {
+    fill: white;
+    fill-opacity: 0.92;
+    stroke: var(--diagonal-color-light);
+    stroke-width: 1;
+  }
+
+  .diagonal-label {
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--diagonal-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .diagonal-intersection-arc {
+    fill: none;
+    stroke: var(--diagonal-color);
+    stroke-width: 1;
+    stroke-opacity: 0.7;
+  }
+
+  .diagonal-intersection-label {
+    font-size: 10px;
+    font-weight: 500;
+    fill: var(--diagonal-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Selection halo */
+  .selection-halo {
+    fill: none;
+    stroke: var(--accent-geometry);
+    stroke-width: 2;
+    stroke-dasharray: 4 4;
+    stroke-opacity: 0.4;
+    pointer-events: none;
+    animation: dashMove 1.5s linear infinite;
+  }
+
+  @keyframes dashMove {
+    to { stroke-dashoffset: -16; }
+  }
+
+  /* ============================================================
+     PROTRACTOR
+     ============================================================ */
+  .protractor-group {
+    cursor: move;
+  }
+
+  .protractor-body {
+    fill: white;
+    fill-opacity: 0.85;
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+  }
+
+  .protractor-baseline {
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .protractor-tick-major {
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .protractor-tick-minor {
+    stroke: var(--protractor-color);
+    stroke-width: 0.9;
+    stroke-opacity: 0.7;
+    stroke-linecap: round;
+  }
+
+  .protractor-tick-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    fill: var(--protractor-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .protractor-center {
+    fill: var(--protractor-color);
+    stroke: white;
+    stroke-width: 2;
+  }
+
+  .protractor-rotation-handle {
+    fill: white;
+    stroke: var(--protractor-color);
+    stroke-width: 2;
+    cursor: grab;
+    transition: r 0.15s ease, fill 0.15s ease;
+  }
+
+  .protractor-rotation-handle:hover {
+    fill: var(--protractor-color-light);
+    r: 9;
+  }
+
+  .protractor-rotation-handle.dragging {
+    cursor: grabbing;
+    fill: var(--protractor-color);
+  }
+
+  .protractor-rotation-arm {
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+    stroke-opacity: 0.65;
+    fill: none;
+  }
+
+  .protractor-reading-bg {
+    fill: var(--protractor-color);
+    fill-opacity: 0.94;
+  }
+
+  .protractor-reading {
+    fill: white;
+    font-size: 13px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .protractor-close-button {
+    fill: white;
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+    cursor: pointer;
+  }
+
+  .protractor-close-x {
+    stroke: var(--protractor-color);
+    stroke-width: 2;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     INFO PANEL (bottom of workspace)
+     ============================================================ */
+  .info-panel {
+    background-color: var(--color-bg);
+    border-top: 1px solid var(--color-border-light);
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-height: 80px;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-md);
+  }
+
+  .info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .info-empty {
+    grid-column: 1 / -1;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: var(--space-md);
+  }
+
+  /* === Characteristics card === */
+  .characteristics-card {
+    background-color: var(--accent-geometry-lighter);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    border-left: 4px solid var(--accent-geometry);
+  }
+
+  .characteristics-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--accent-geometry-dark);
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .characteristics-title svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .characteristic-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(149, 117, 205, 0.15);
+    font-size: 0.88rem;
+    color: var(--color-text-primary);
+    line-height: 1.45;
+  }
+
+  .characteristic-row:last-child {
+    border-bottom: none;
+  }
+
+  .characteristic-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  .characteristic-icon.verified {
+    color: var(--accent-math);
+  }
+
+  .characteristic-icon.failed {
+    color: var(--accent-coral);
+  }
+
+  .characteristic-icon.info {
+    color: var(--accent-geometry-dark);
+  }
+
+  .characteristic-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .characteristic-text {
+    flex: 1;
+  }
+
+  .characteristic-text strong {
+    font-weight: 700;
+  }
+
+  .characteristic-value {
+    color: var(--accent-geometry-dark);
+    font-weight: 600;
+  }
+
+  /* ============================================================
+     RULES POPUP
+     ============================================================ */
+  .rules-popup {
+    position: fixed;
+    bottom: var(--space-lg);
+    right: var(--space-lg);
+    background-color: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    box-shadow: var(--shadow-modal);
+    max-width: 340px;
+    z-index: 50;
+    transform: translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    border-left: 4px solid var(--accent-geometry);
+  }
+
+  .rules-popup.visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .rules-popup-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-geometry-dark);
+    margin-bottom: var(--space-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .rules-popup-content {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  .rules-popup-content ul {
+    margin-top: var(--space-sm);
+    padding-left: var(--space-md);
+  }
+
+  .rules-popup-content li {
+    margin-bottom: 4px;
+  }
+
+  .rules-popup-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .rules-popup-close:hover {
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+  }
+
+  /* ============================================================
+     PROTRACTOR FLOATING HINT
+     ============================================================ */
+  .protractor-hint {
+    position: absolute;
+    background-color: var(--color-text-primary);
+    color: white;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 20;
+    max-width: 220px;
+    line-height: 1.4;
+    box-shadow: var(--shadow-modal);
+  }
+
+  .protractor-hint.visible {
+    opacity: 0.95;
+  }
+
+  .protractor-hint::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--color-text-primary);
+  }
+
+  /* ============================================================
+     PRINT STYLES
+     ============================================================ */
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+
+  @media print {
+    body { background: white; }
+    .polymath-header { box-shadow: none; border-bottom: 1px solid #000; }
+    .icon-button,
+    .shape-palette,
+    .rules-popup,
+    .protractor-hint,
+    .workspace-header { display: none !important; }
+    .info-panel {
+      page-break-inside: avoid;
+      background: white;
+      border-top: 1px solid #000;
+    }
+    .main-content {
+      display: block;
+      padding: 0;
+    }
+    .workspace {
+      box-shadow: none;
+      border: 1px solid #000;
+      page-break-inside: avoid;
+    }
+    .canvas-wrap {
+      background-image: none;
+    }
+    .polymath-logo {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .characteristics-card {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+
+  /* ============================================================
+     QUIZ MODULE — Geometry Revision & Testing
+     A separate full-width section appended below the manipulator.
+     Each shape / angle concept has its own revision segment.
+     ============================================================ */
+  .quiz-wrapper {
+    max-width: 1100px;
+    margin: var(--space-2xl) auto var(--space-2xl);
+    padding: 0 var(--space-xl);
+    width: 100%;
+  }
+
+  .quiz-section-banner {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+  }
+
+  .quiz-section-banner .quiz-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent-geometry-dark);
+    background: var(--accent-geometry-lighter);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: var(--space-md);
+  }
+
+  .quiz-section-banner h2 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: var(--space-sm);
+  }
+
+  .quiz-section-banner p {
+    font-size: 1.02rem;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ----- Topic chooser grid ----- */
+  .topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+  }
+
+  .topic-card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .topic-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: var(--topic-accent, var(--accent-geometry));
+    opacity: 0.85;
+    transition: width 0.25s ease;
+  }
+
+  .topic-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-button-hover);
+    border-color: var(--topic-accent, var(--accent-geometry-light));
+  }
+
+  .topic-card:hover::before { width: 8px; }
+
+  .topic-card:active { transform: translateY(-1px); }
+
+  .topic-card-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: var(--radius-md);
+    background: var(--topic-accent-light, var(--accent-geometry-lighter));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-xs);
+  }
+
+  .topic-card-icon svg {
+    width: 34px;
+    height: 34px;
+    stroke: var(--topic-accent-dark, var(--accent-geometry-dark));
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .topic-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: 0.01em;
+  }
+
+  .topic-card-desc {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+  }
+
+  .topic-card-meta {
+    margin-top: auto;
+    padding-top: var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .topic-best {
+    font-family: var(--font-numerals);
+    color: var(--topic-accent-dark, var(--accent-geometry-dark));
+  }
+
+  /* ----- Quiz runner panel ----- */
+  .quiz-runner {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-xl);
+    display: none;
+    animation: scaleInQuiz 0.4s ease-out;
+  }
+
+  .quiz-runner.active { display: block; }
+
+  @keyframes scaleInQuiz {
+    from { opacity: 0; transform: scale(0.97) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .quiz-runner-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--color-border-light);
+    padding-bottom: var(--space-md);
+    margin-bottom: var(--space-lg);
+  }
+
+  .quiz-runner-titlewrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .quiz-runner-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: var(--topic-accent-light, var(--accent-geometry-lighter));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .quiz-runner-badge svg {
+    width: 28px; height: 28px;
+    stroke: var(--topic-accent-dark, var(--accent-geometry-dark));
+    fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round;
+  }
+
+  .quiz-runner-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  .quiz-runner-sub {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+  }
+
+  .quiz-back-button {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-medium);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-family: var(--font-base);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-button);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .quiz-back-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+    border-color: var(--accent-geometry-light);
+  }
+
+  /* ----- Progress + score strip ----- */
+  .quiz-progress-strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+  }
+
+  .quiz-progress-track {
+    flex: 1;
+    min-width: 160px;
+    height: 10px;
+    background: var(--color-border-light);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .quiz-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--topic-accent, var(--accent-geometry));
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .quiz-progress-count {
+    font-family: var(--font-numerals);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .quiz-score-pill {
+    font-family: var(--font-numerals);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-math);
+    background: var(--accent-math-lighter);
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ----- Question card ----- */
+  .question-card {
+    animation: questionIn 0.35s ease-out;
+  }
+
+  @keyframes questionIn {
+    from { opacity: 0; transform: translateX(18px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .question-stem {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-bottom: var(--space-lg);
+    color: var(--color-text-primary);
+  }
+
+  .question-stem .qnum {
+    color: var(--topic-accent-dark, var(--accent-geometry-dark));
+    font-family: var(--font-numerals);
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .figure-stage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #FCFBFE;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    min-height: 240px;
+  }
+
+  .figure-stage svg {
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* SVG figure element styling */
+  .fig-shape {
+    fill: var(--accent-geometry-lighter);
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+  }
+  .fig-line {
+    stroke: var(--color-text-primary);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+  .fig-line-secondary {
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+  .fig-ray {
+    stroke: var(--color-text-primary);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+  .fig-arc {
+    fill: none;
+    stroke: var(--protractor-color);
+    stroke-width: 2;
+  }
+  .fig-arc-fill {
+    fill: var(--protractor-color-light);
+    fill-opacity: 0.55;
+    stroke: var(--protractor-color);
+    stroke-width: 1.5;
+  }
+  .fig-angle-label {
+    font-family: var(--font-numerals);
+    font-size: 16px;
+    font-weight: 700;
+    fill: var(--color-text-primary);
+  }
+  .fig-angle-unknown {
+    font-family: var(--font-numerals);
+    font-size: 17px;
+    font-weight: 700;
+    fill: #C62828;
+  }
+  .fig-point-label {
+    font-family: var(--font-numerals);
+    font-size: 15px;
+    font-weight: 700;
+    fill: var(--color-text-secondary);
+  }
+  .fig-vertex {
+    fill: var(--accent-geometry-dark);
+  }
+  .fig-rightangle {
+    fill: none;
+    stroke: var(--color-text-primary);
+    stroke-width: 2;
+  }
+  .fig-tick {
+    stroke: var(--accent-geometry-dark);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .fig-parallel {
+    fill: none;
+    stroke: var(--accent-science);
+    stroke-width: 2;
+  }
+
+  /* ----- MCQ options ----- */
+  .option-list {
+    display: grid;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .option-list.two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 540px) {
+    .option-list.two-col { grid-template-columns: 1fr; }
+  }
+
+  .option-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    width: 100%;
+    text-align: left;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--color-border-medium);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: var(--font-base);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-button);
+  }
+
+  .option-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-button-hover);
+    border-color: var(--accent-geometry-light);
+    background: var(--accent-geometry-lighter);
+  }
+
+  .option-button:active:not(:disabled) { transform: translateY(0.5px); }
+
+  .option-button:disabled { cursor: default; }
+
+  .option-key {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent-geometry-lighter);
+    color: var(--accent-geometry-dark);
+    font-family: var(--font-numerals);
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+
+  .option-value { font-family: var(--font-numerals); font-weight: 600; }
+  .option-text-label { font-family: var(--font-base); font-weight: 500; }
+
+  .option-button.correct {
+    border-color: var(--accent-math);
+    background: var(--accent-math-lighter);
+  }
+  .option-button.correct .option-key {
+    background: var(--accent-math);
+    color: white;
+  }
+  .option-button.incorrect {
+    border-color: var(--accent-coral);
+    background: #FFEBEE;
+  }
+  .option-button.incorrect .option-key {
+    background: var(--accent-coral);
+    color: white;
+  }
+  .option-button.faded { opacity: 0.5; }
+
+  .option-mark {
+    margin-left: auto;
+    width: 22px; height: 22px;
+    flex-shrink: 0;
+  }
+  .option-mark svg { width: 100%; height: 100%; }
+
+  /* ----- Feedback panel ----- */
+  .feedback-panel {
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    margin-top: var(--space-md);
+    font-size: 0.98rem;
+    line-height: 1.55;
+    display: none;
+    animation: feedbackIn 0.4s ease-out;
+  }
+
+  @keyframes feedbackIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .feedback-panel.show { display: block; }
+
+  .feedback-panel.correct {
+    background: var(--accent-math-lighter);
+    border-left: 4px solid var(--accent-math);
+  }
+  .feedback-panel.incorrect {
+    background: #FFF3F3;
+    border-left: 4px solid var(--accent-coral);
+  }
+
+  .feedback-head {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .feedback-panel.correct .feedback-head { color: #2E7D32; }
+  .feedback-panel.incorrect .feedback-head { color: #C62828; }
+
+  .feedback-body { color: var(--color-text-secondary); }
+  .feedback-body strong { color: var(--color-text-primary); }
+  .feedback-body .calc {
+    font-family: var(--font-numerals);
+    background: rgba(0,0,0,0.04);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* ----- Quiz footer ----- */
+  .quiz-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+  }
+
+  .quiz-next-button {
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--topic-accent, var(--accent-geometry));
+    color: white;
+    font-family: var(--font-base);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: var(--shadow-button);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .quiz-next-button.ready {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .quiz-next-button.ready:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-button-hover);
+    filter: brightness(0.96);
+  }
+  .quiz-next-button.ready:active { transform: translateY(0); }
+
+  /* ----- Results screen ----- */
+  .quiz-results {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+    animation: scaleInQuiz 0.45s ease-out;
+  }
+
+  .results-ring-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto var(--space-lg);
+  }
+
+  .results-ring-wrap svg { transform: rotate(-90deg); }
+
+  .results-ring-bg {
+    fill: none;
+    stroke: var(--color-border-light);
+    stroke-width: 14;
+  }
+  .results-ring-fill {
+    fill: none;
+    stroke: var(--topic-accent, var(--accent-geometry));
+    stroke-width: 14;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.1, 0.64, 1);
+  }
+
+  .results-percent {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .results-percent .pct-num {
+    font-family: var(--font-numerals);
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1;
+  }
+  .results-percent .pct-frac {
+    font-family: var(--font-numerals);
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+  }
+
+  .results-message {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+  }
+  .results-detail {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    line-height: 1.55;
+    max-width: 460px;
+    margin: 0 auto var(--space-xl);
+  }
+
+  .results-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .results-review {
+    margin-top: var(--space-2xl);
+    text-align: left;
+    border-top: 1px solid var(--color-border-light);
+    padding-top: var(--space-lg);
+  }
+  .results-review h4 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+  }
+  .review-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: 0.92rem;
+  }
+  .review-icon {
+    width: 22px; height: 22px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .review-icon svg { width: 100%; height: 100%; }
+  .review-icon.ok { color: var(--accent-math); }
+  .review-icon.no { color: var(--accent-coral); }
+  .review-text { color: var(--color-text-secondary); line-height: 1.45; }
+  .review-text strong { color: var(--color-text-primary); }
+  .review-text .ans-num { font-family: var(--font-numerals); }
+
+  /* confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 9px;
+    height: 14px;
+    top: -20px;
+    z-index: 2000;
+    pointer-events: none;
+    border-radius: 1px;
+    will-change: transform, opacity;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotateZ(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotateZ(720deg); opacity: 0; }
+  }
+
+  @media (max-width: 700px) {
+    .quiz-wrapper { padding: 0 var(--space-md); }
+    .quiz-runner { padding: var(--space-lg); }
+    .question-stem { font-size: 1.05rem; }
+  }
+
+  @media print {
+    .quiz-wrapper { display: none !important; }
+  }
+
+</style>
+</head>
+<body>
+
+<header class="polymath-header">
+  <img src="https://dl.dropboxusercontent.com/scl/fi/h40yjlyg8ldefwfaa3dib/polymath-logo-sticker.png?rlkey=o1ra4taqy79gt9t8u096v82zj"
+       alt="Polymath Learning Centre"
+       class="polymath-logo" />
+  <div class="header-actions">
+    <button class="icon-button" id="help-button" title="Show rules for current shape">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    </button>
+    <button class="icon-button" id="print-button" title="Print">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="title-banner">
+  <h1>Interactive Shape Manipulator</h1>
+  <p class="subtitle">
+    Add common shapes to the canvas and drag their vertices around. Each shape locks to its defining rules — angles update live as you move. Drop the protractor on any point to measure.
+  </p>
+</div>
+
+<main class="main-content">
+  <!-- ============================================================
+       LEFT PALETTE
+       ============================================================ -->
+  <aside class="shape-palette">
+    <div class="palette-title">Add a Shape</div>
+    <div class="palette-grid">
+      <button class="palette-button" data-shape="equilateral">
+        <svg viewBox="0 0 60 60">
+          <polygon points="30,10 52,48 8,48" />
+        </svg>
+        <span class="palette-button-label">Equilateral<br/>Triangle</span>
+      </button>
+
+      <button class="palette-button" data-shape="isosceles">
+        <svg viewBox="0 0 60 60">
+          <polygon points="30,8 50,50 10,50" />
+        </svg>
+        <span class="palette-button-label">Isosceles<br/>Triangle</span>
+      </button>
+
+      <button class="palette-button" data-shape="rhombus">
+        <svg viewBox="0 0 60 60">
+          <polygon points="30,8 52,30 30,52 8,30" />
+        </svg>
+        <span class="palette-button-label">Rhombus</span>
+      </button>
+
+      <button class="palette-button" data-shape="parallelogram">
+        <svg viewBox="0 0 60 60">
+          <polygon points="14,14 54,14 46,46 6,46" />
+        </svg>
+        <span class="palette-button-label">Parallelogram</span>
+      </button>
+
+      <button class="palette-button" data-shape="trapezium">
+        <svg viewBox="0 0 60 60">
+          <polygon points="18,12 42,12 54,48 6,48" />
+        </svg>
+        <span class="palette-button-label">Isosceles<br/>Trapezium</span>
+      </button>
+
+      <button class="palette-button" data-shape="trapezium-right">
+        <svg viewBox="0 0 60 60">
+          <polygon points="10,12 42,12 50,48 10,48" />
+        </svg>
+        <span class="palette-button-label">Right<br/>Trapezium</span>
+      </button>
+    </div>
+
+    <div class="palette-divider"></div>
+
+    <div class="palette-title">Tools</div>
+    <div class="palette-actions">
+      <button class="action-button protractor-toggle" id="protractor-button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 14 A 10 10 0 0 1 22 14 Z"/>
+          <line x1="12" y1="14" x2="12" y2="4"/>
+        </svg>
+        Add Protractor
+      </button>
+    </div>
+
+    <div class="palette-divider"></div>
+
+    <div class="palette-title">Display</div>
+    <div class="toggle-row">
+      <span>Side lengths</span>
+      <div class="toggle-switch active" id="toggle-sides" data-active="true"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Equal / parallel marks</span>
+      <div class="toggle-switch active" id="toggle-marks" data-active="true"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Diagonals (4-sides)</span>
+      <div class="toggle-switch active" id="toggle-diagonals" data-active="true"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Characteristics tips</span>
+      <div class="toggle-switch active" id="toggle-tips" data-active="true"></div>
+    </div>
+    <div class="toggle-row">
+      <span>Grid</span>
+      <div class="toggle-switch active" id="toggle-grid" data-active="true"></div>
+    </div>
+
+    <div class="palette-divider"></div>
+
+    <div class="palette-actions">
+      <button class="action-button" id="duplicate-button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        Duplicate selected
+      </button>
+      <button class="action-button danger" id="delete-button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+        </svg>
+        Delete selected
+      </button>
+      <button class="action-button danger" id="clear-button">
+        Clear canvas
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       RIGHT WORKSPACE
+       ============================================================ -->
+  <section class="workspace">
+    <div class="workspace-header">
+      <div class="workspace-status">
+        <span class="status-dot idle" id="status-dot"></span>
+        <span id="status-text">No shape selected</span>
+      </div>
+      <div class="workspace-info" id="shape-count">0 shapes on canvas</div>
+    </div>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <svg id="canvas-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <div class="canvas-empty-hint" id="empty-hint">
+        <span class="big-emoji">📐</span>
+        <p>Click any shape in the palette to add it to your canvas. Then drag the vertices to manipulate it.</p>
+      </div>
+
+      <div class="protractor-hint" id="protractor-hint"></div>
+    </div>
+
+    <div class="info-panel" id="info-panel">
+      <div class="info-empty">Select a shape to see its measurements and special characteristics</div>
+    </div>
+  </section>
+</main>
+
+<!-- Rules Popup -->
+<div class="rules-popup" id="rules-popup">
+  <button class="rules-popup-close" id="rules-popup-close">×</button>
+  <div class="rules-popup-title" id="rules-title">Shape Rules</div>
+  <div class="rules-popup-content" id="rules-content"></div>
+</div>
+
+<script>
+// ============================================================
+// POLYMATH SHAPE MANIPULATOR — v2 with protractor, diagonals, tips
+// ============================================================
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const canvasSvg = document.getElementById('canvas-svg');
+const canvasWrap = document.getElementById('canvas-wrap');
+const emptyHint = document.getElementById('empty-hint');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const shapeCountEl = document.getElementById('shape-count');
+const infoPanel = document.getElementById('info-panel');
+const rulesPopup = document.getElementById('rules-popup');
+const rulesTitle = document.getElementById('rules-title');
+const rulesContent = document.getElementById('rules-content');
+const protractorHint = document.getElementById('protractor-hint');
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  shapes: [],
+  selectedId: null,
+  nextId: 1,
+
+  showSides: true,
+  showMarks: true,
+  showGrid: true,
+  showDiagonals: true,
+  showTips: true,
+
+  drag: null,
+  canvasW: 0,
+  canvasH: 0,
+
+  protractor: null   // { centre: {x,y}, rotation: radians, radius: number } or null
+};
+
+// ============================================================
+// SHAPE RULES (description shown in popup)
+// ============================================================
+const SHAPE_RULES = {
+  equilateral: {
+    name: 'Equilateral Triangle',
+    rules: [
+      'All three sides have equal length.',
+      'All three interior angles are exactly 60°.',
+      'Dragging any vertex rotates and scales the triangle around its centroid — the three sides always stay equal.'
+    ]
+  },
+  isosceles: {
+    name: 'Isosceles Triangle',
+    rules: [
+      'Two sides (the legs) are equal in length.',
+      'The two base angles (opposite the equal sides) are equal.',
+      'Dragging the apex slides it along the axis of symmetry. Dragging a base vertex moves both base vertices symmetrically.'
+    ]
+  },
+  rhombus: {
+    name: 'Rhombus',
+    rules: [
+      'All four sides are equal in length.',
+      'Opposite angles are equal; consecutive angles add up to 180°.',
+      'Diagonals are perpendicular and bisect each other.',
+      'Diagonals also bisect the interior angles.',
+      'Dragging any vertex preserves all four sides equal.'
+    ]
+  },
+  parallelogram: {
+    name: 'Parallelogram',
+    rules: [
+      'Opposite sides are parallel and equal in length.',
+      'Opposite angles are equal.',
+      'Consecutive angles are supplementary (sum to 180°).',
+      'Diagonals bisect each other (but are generally NOT equal or perpendicular).',
+      'Dragging one vertex moves the opposite vertex so the centre stays fixed.'
+    ]
+  },
+  trapezium: {
+    name: 'Isosceles Trapezium',
+    rules: [
+      'Exactly one pair of parallel sides (the top and bottom).',
+      'The two non-parallel sides (legs) are equal in length.',
+      'The base angles on each parallel side are equal.',
+      'The diagonals are equal in length.',
+      'Dragging preserves symmetry about the vertical axis.'
+    ]
+  },
+  'trapezium-right': {
+    name: 'Right Trapezium',
+    rules: [
+      'Exactly one pair of parallel sides.',
+      'Two adjacent angles are 90° (right angles).',
+      'Dragging preserves the right angles on the left side.'
+    ]
+  }
+};
+
+// ============================================================
+// VECTOR MATH HELPERS
+// ============================================================
+function v(x, y) { return { x, y }; }
+function add(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
+function mul(a, s) { return { x: a.x * s, y: a.y * s }; }
+function len(a) { return Math.hypot(a.x, a.y); }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function norm(a) {
+  const L = len(a);
+  return L === 0 ? { x: 0, y: 0 } : { x: a.x / L, y: a.y / L };
+}
+function rotate(p, angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };
+}
+function rotateAround(p, center, angle) {
+  return add(center, rotate(sub(p, center), angle));
+}
+function midpoint(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+function centroid(points) {
+  const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+  return { x: sum.x / points.length, y: sum.y / points.length };
+}
+function interiorAngle(a, b, c) {
+  const ba = sub(a, b);
+  const bc = sub(c, b);
+  const dot = ba.x * bc.x + ba.y * bc.y;
+  const cross = ba.x * bc.y - ba.y * bc.x;
+  return Math.abs(Math.atan2(Math.abs(cross), dot));
+}
+function rad2deg(r) { return r * 180 / Math.PI; }
+function deg2rad(d) { return d * Math.PI / 180; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// Dot product of two vectors
+function dot(a, b) { return a.x * b.x + a.y * b.y; }
+
+// Cross product z-component
+function crossZ(a, b) { return a.x * b.y - a.y * b.x; }
+
+// Check approximate equality with tolerance
+function approxEqual(a, b, tol = 0.5) {
+  return Math.abs(a - b) <= tol;
+}
+
+// Polygon area using shoelace formula
+function polygonArea(verts) {
+  let area = 0;
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const a = verts[i];
+    const b = verts[(i + 1) % n];
+    area += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(area) / 2;
+}
+
+// Point-in-polygon test
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y))
+      && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// ============================================================
+// CANVAS RESIZE HANDLING
+// ============================================================
+function resizeCanvas() {
+  const rect = canvasWrap.getBoundingClientRect();
+  state.canvasW = rect.width;
+  state.canvasH = rect.height;
+  canvasSvg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  redrawAll();
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// ============================================================
+// SHAPE FACTORIES
+// ============================================================
+function createShape(type) {
+  const cx = state.canvasW / 2;
+  const cy = state.canvasH / 2;
+  const baseSize = Math.min(state.canvasW, state.canvasH) * 0.22;
+
+  const jitter = state.shapes.length * 18;
+  const offX = (jitter % 80) - 40;
+  const offY = ((jitter * 1.3) % 80) - 40;
+
+  let vertices = [];
+
+  switch (type) {
+    case 'equilateral': {
+      const r = baseSize;
+      for (let i = 0; i < 3; i++) {
+        const angle = -Math.PI / 2 + i * (2 * Math.PI / 3);
+        vertices.push({
+          x: cx + offX + r * Math.cos(angle),
+          y: cy + offY + r * Math.sin(angle)
+        });
+      }
+      break;
+    }
+    case 'isosceles': {
+      const halfBase = baseSize * 0.7;
+      const height = baseSize * 1.1;
+      vertices.push({ x: cx + offX, y: cy + offY - height * 0.5 });
+      vertices.push({ x: cx + offX + halfBase, y: cy + offY + height * 0.5 });
+      vertices.push({ x: cx + offX - halfBase, y: cy + offY + height * 0.5 });
+      break;
+    }
+    case 'rhombus': {
+      const r = baseSize;
+      vertices.push({ x: cx + offX,       y: cy + offY - r });
+      vertices.push({ x: cx + offX + r,   y: cy + offY });
+      vertices.push({ x: cx + offX,       y: cy + offY + r });
+      vertices.push({ x: cx + offX - r,   y: cy + offY });
+      break;
+    }
+    case 'parallelogram': {
+      const w = baseSize * 1.3;
+      const h = baseSize;
+      const slant = baseSize * 0.3;
+      vertices.push({ x: cx + offX - w / 2 + slant, y: cy + offY - h / 2 });
+      vertices.push({ x: cx + offX + w / 2 + slant, y: cy + offY - h / 2 });
+      vertices.push({ x: cx + offX + w / 2 - slant, y: cy + offY + h / 2 });
+      vertices.push({ x: cx + offX - w / 2 - slant, y: cy + offY + h / 2 });
+      break;
+    }
+    case 'trapezium': {
+      const topHalf = baseSize * 0.55;
+      const botHalf = baseSize * 0.95;
+      const h = baseSize * 0.9;
+      vertices.push({ x: cx + offX - topHalf, y: cy + offY - h / 2 });
+      vertices.push({ x: cx + offX + topHalf, y: cy + offY - h / 2 });
+      vertices.push({ x: cx + offX + botHalf, y: cy + offY + h / 2 });
+      vertices.push({ x: cx + offX - botHalf, y: cy + offY + h / 2 });
+      break;
+    }
+    case 'trapezium-right': {
+      const topW = baseSize * 1.1;
+      const botW = baseSize * 1.6;
+      const h = baseSize * 1.0;
+      const leftX = cx + offX - botW / 2;
+      vertices.push({ x: leftX,                  y: cy + offY - h / 2 });
+      vertices.push({ x: leftX + topW,           y: cy + offY - h / 2 });
+      vertices.push({ x: leftX + botW,           y: cy + offY + h / 2 });
+      vertices.push({ x: leftX,                  y: cy + offY + h / 2 });
+      break;
+    }
+  }
+
+  const shape = {
+    id: state.nextId++,
+    type,
+    vertices,
+    element: null
+  };
+  state.shapes.push(shape);
+  return shape;
+}
+
+// ============================================================
+// CONSTRAINT APPLIERS — preserve defining rules during drag
+// ============================================================
+function applyConstraints(shape, dragIndex, newPos) {
+  const verts = shape.vertices;
+
+  switch (shape.type) {
+    case 'equilateral': {
+      const oldCentroid = centroid(verts);
+      verts[dragIndex] = { ...newPos };
+      const dragVec = sub(newPos, oldCentroid);
+      const a120 = rotate(dragVec, 2 * Math.PI / 3);
+      const a240 = rotate(dragVec, 4 * Math.PI / 3);
+      const idx1 = (dragIndex + 1) % 3;
+      const idx2 = (dragIndex + 2) % 3;
+      verts[idx1] = add(oldCentroid, a120);
+      verts[idx2] = add(oldCentroid, a240);
+      break;
+    }
+
+    case 'isosceles': {
+      if (dragIndex === 0) {
+        // Drag apex — must stay on perpendicular bisector of base
+        const baseMid = midpoint(verts[1], verts[2]);
+        const baseVec = sub(verts[2], verts[1]);
+        const baseLen = len(baseVec);
+        if (baseLen === 0) { verts[0] = newPos; break; }
+        const baseUnit = mul(baseVec, 1 / baseLen);
+        const perp = { x: -baseUnit.y, y: baseUnit.x };
+        const offset = sub(newPos, baseMid);
+        const t = offset.x * perp.x + offset.y * perp.y;
+        verts[0] = add(baseMid, mul(perp, t));
+      } else {
+        // Drag base vertex — mirror across axis through apex
+        const apex = verts[0];
+        const oldBaseMid = midpoint(verts[1], verts[2]);
+        let axisDir = sub(oldBaseMid, apex);
+        const axisLen = len(axisDir);
+        if (axisLen === 0) {
+          axisDir = { x: 0, y: 1 };
+        } else {
+          axisDir = mul(axisDir, 1 / axisLen);
+        }
+        verts[dragIndex] = { ...newPos };
+        const apexToDragged = sub(newPos, apex);
+        const along = apexToDragged.x * axisDir.x + apexToDragged.y * axisDir.y;
+        const projection = mul(axisDir, along);
+        const perpComp = sub(apexToDragged, projection);
+        const otherVertex = add(apex, sub(projection, perpComp));
+        const otherIndex = dragIndex === 1 ? 2 : 1;
+        verts[otherIndex] = otherVertex;
+      }
+      break;
+    }
+
+    case 'rhombus': {
+      const oldCentre = midpoint(verts[0], verts[2]);
+      const otherDiagIdx1 = (dragIndex + 1) % 4;
+      const otherDiagIdx2 = (dragIndex + 3) % 4;
+      const oppIdx = (dragIndex + 2) % 4;
+      const oldOtherHalfLen = dist(verts[otherDiagIdx1], oldCentre);
+
+      verts[dragIndex] = { ...newPos };
+      verts[oppIdx] = sub(mul(oldCentre, 2), newPos);
+      const draggedDiagDir = sub(newPos, oldCentre);
+      const draggedDiagLen = len(draggedDiagDir);
+      if (draggedDiagLen === 0) break;
+      const perp = norm({ x: -draggedDiagDir.y, y: draggedDiagDir.x });
+      verts[otherDiagIdx1] = add(oldCentre, mul(perp, oldOtherHalfLen));
+      verts[otherDiagIdx2] = sub(oldCentre, mul(perp, oldOtherHalfLen));
+      break;
+    }
+
+    case 'parallelogram': {
+      const oldCentre = midpoint(verts[0], verts[2]);
+      const oppIdx = (dragIndex + 2) % 4;
+      verts[dragIndex] = { ...newPos };
+      verts[oppIdx] = sub(mul(oldCentre, 2), newPos);
+      break;
+    }
+
+    case 'trapezium': {
+      const oldTopY = (verts[0].y + verts[1].y) / 2;
+      const oldBotY = (verts[2].y + verts[3].y) / 2;
+      const oldTopMidX = (verts[0].x + verts[1].x) / 2;
+      const oldBotMidX = (verts[2].x + verts[3].x) / 2;
+      const oldAxisX = (oldTopMidX + oldBotMidX) / 2;
+      const oldTopHalfW = Math.abs(verts[1].x - verts[0].x) / 2;
+      const oldBotHalfW = Math.abs(verts[2].x - verts[3].x) / 2;
+
+      if (dragIndex === 0 || dragIndex === 1) {
+        const newTopY = newPos.y;
+        const constrainedTopY = Math.min(newTopY, oldBotY - 20);
+        const newTopHalfW = Math.max(20, Math.abs(newPos.x - oldAxisX));
+        if (dragIndex === 0) {
+          const sign = newPos.x < oldAxisX ? -1 : 1;
+          verts[0] = { x: oldAxisX + sign * newTopHalfW, y: constrainedTopY };
+          verts[1] = { x: oldAxisX - sign * newTopHalfW, y: constrainedTopY };
+        } else {
+          const sign = newPos.x > oldAxisX ? 1 : -1;
+          verts[1] = { x: oldAxisX + sign * newTopHalfW, y: constrainedTopY };
+          verts[0] = { x: oldAxisX - sign * newTopHalfW, y: constrainedTopY };
+        }
+        verts[2] = { x: oldAxisX + oldBotHalfW, y: oldBotY };
+        verts[3] = { x: oldAxisX - oldBotHalfW, y: oldBotY };
+      } else {
+        const newBotY = newPos.y;
+        const constrainedBotY = Math.max(newBotY, oldTopY + 20);
+        const newBotHalfW = Math.max(20, Math.abs(newPos.x - oldAxisX));
+        if (dragIndex === 2) {
+          const sign = newPos.x > oldAxisX ? 1 : -1;
+          verts[2] = { x: oldAxisX + sign * newBotHalfW, y: constrainedBotY };
+          verts[3] = { x: oldAxisX - sign * newBotHalfW, y: constrainedBotY };
+        } else {
+          const sign = newPos.x < oldAxisX ? -1 : 1;
+          verts[3] = { x: oldAxisX + sign * newBotHalfW, y: constrainedBotY };
+          verts[2] = { x: oldAxisX - sign * newBotHalfW, y: constrainedBotY };
+        }
+        verts[0] = { x: oldAxisX - oldTopHalfW, y: oldTopY };
+        verts[1] = { x: oldAxisX + oldTopHalfW, y: oldTopY };
+      }
+      break;
+    }
+
+    case 'trapezium-right': {
+      if (dragIndex === 0) {
+        const newY = Math.min(newPos.y, verts[2].y - 20);
+        verts[0] = { x: newPos.x, y: newY };
+        verts[3] = { x: newPos.x, y: verts[3].y };
+        verts[1] = { x: verts[1].x, y: newY };
+      } else if (dragIndex === 1) {
+        const newX = Math.max(newPos.x, verts[0].x + 20);
+        verts[1] = { x: newX, y: verts[0].y };
+      } else if (dragIndex === 2) {
+        const newX = Math.max(newPos.x, verts[3].x + 20);
+        verts[2] = { x: newX, y: verts[3].y };
+      } else if (dragIndex === 3) {
+        const newY = Math.max(newPos.y, verts[0].y + 20);
+        verts[3] = { x: newPos.x, y: newY };
+        verts[0] = { x: newPos.x, y: verts[0].y };
+        verts[2] = { x: verts[2].x, y: newY };
+      }
+      break;
+    }
+  }
+
+  for (let i = 0; i < verts.length; i++) {
+    verts[i].x = clamp(verts[i].x, 20, state.canvasW - 20);
+    verts[i].y = clamp(verts[i].y, 20, state.canvasH - 20);
+  }
+}
+
+// ============================================================
+// MOVE WHOLE SHAPE
+// ============================================================
+function translateShape(shape, dx, dy) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const vertex of shape.vertices) {
+    minX = Math.min(minX, vertex.x);
+    minY = Math.min(minY, vertex.y);
+    maxX = Math.max(maxX, vertex.x);
+    maxY = Math.max(maxY, vertex.y);
+  }
+  if (minX + dx < 10) dx = 10 - minX;
+  if (minY + dy < 10) dy = 10 - minY;
+  if (maxX + dx > state.canvasW - 10) dx = (state.canvasW - 10) - maxX;
+  if (maxY + dy > state.canvasH - 10) dy = (state.canvasH - 10) - maxY;
+  for (const vertex of shape.vertices) {
+    vertex.x += dx;
+    vertex.y += dy;
+  }
+}
+
+// ============================================================
+// RENDERING — main loop
+// ============================================================
+function clearCanvas() {
+  while (canvasSvg.firstChild) {
+    canvasSvg.removeChild(canvasSvg.firstChild);
+  }
+}
+
+function redrawAll() {
+  clearCanvas();
+  for (const shape of state.shapes) {
+    drawShape(shape);
+  }
+  if (state.protractor) {
+    drawProtractor();
+  }
+  emptyHint.style.opacity = (state.shapes.length === 0 && !state.protractor) ? '1' : '0';
+  shapeCountEl.textContent = `${state.shapes.length} shape${state.shapes.length === 1 ? '' : 's'} on canvas`;
+  updateStatus();
+  updateInfoPanel();
+}
+
+function drawShape(shape) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.classList.add('shape-group');
+  g.setAttribute('data-shape-id', shape.id);
+  if (state.selectedId === shape.id) g.classList.add('selected');
+
+  // Polygon body
+  const polygon = document.createElementNS(SVG_NS, 'polygon');
+  polygon.classList.add('shape-fill');
+  polygon.setAttribute('points', shape.vertices.map(p => `${p.x},${p.y}`).join(' '));
+  g.appendChild(polygon);
+  polygon.addEventListener('pointerdown', e => onShapeBodyPointerDown(e, shape));
+
+  // Diagonals (for 4-sided shapes)
+  if (state.showDiagonals && shape.vertices.length === 4) {
+    drawDiagonals(g, shape);
+  }
+
+  // Side length labels
+  if (state.showSides) {
+    drawSideLengths(g, shape);
+  }
+
+  // Equal-side / parallel marks
+  if (state.showMarks) {
+    drawShapeMarks(g, shape);
+  }
+
+  // Angle arcs and labels
+  drawAngles(g, shape);
+
+  // Vertex handles
+  drawVertexHandles(g, shape);
+
+  // Selection halo
+  if (state.selectedId === shape.id) {
+    const halo = document.createElementNS(SVG_NS, 'polygon');
+    halo.classList.add('selection-halo');
+    halo.setAttribute('points', shape.vertices.map(p => `${p.x},${p.y}`).join(' '));
+    g.insertBefore(halo, polygon.nextSibling);
+  }
+
+  canvasSvg.appendChild(g);
+  shape.element = g;
+}
+
+function drawVertexHandles(g, shape) {
+  shape.vertices.forEach((vertex, index) => {
+    const handle = document.createElementNS(SVG_NS, 'circle');
+    handle.classList.add('vertex-handle');
+    handle.setAttribute('cx', vertex.x);
+    handle.setAttribute('cy', vertex.y);
+    handle.setAttribute('r', 8);
+    handle.setAttribute('data-vertex-index', index);
+    handle.addEventListener('pointerdown', e => onVertexPointerDown(e, shape, index));
+    g.appendChild(handle);
+  });
+}
+
+function drawSideLengths(g, shape) {
+  const verts = shape.vertices;
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i];
+    const b = verts[(i + 1) % verts.length];
+    const mid = midpoint(a, b);
+    const length = dist(a, b);
+    const c = centroid(verts);
+    const outward = norm(sub(mid, c));
+    const labelX = mid.x + outward.x * 16;
+    const labelY = mid.y + outward.y * 16;
+    const textContent = length.toFixed(0);
+
+    const padding = 4;
+    const charWidth = 6.5;
+    const textW = textContent.length * charWidth + padding * 2;
+    const textH = 16;
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.classList.add('side-length-bg');
+    bg.setAttribute('x', labelX - textW / 2);
+    bg.setAttribute('y', labelY - textH / 2);
+    bg.setAttribute('width', textW);
+    bg.setAttribute('height', textH);
+    bg.setAttribute('rx', 4);
+    g.appendChild(bg);
+
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.classList.add('side-length');
+    text.setAttribute('x', labelX);
+    text.setAttribute('y', labelY);
+    text.textContent = textContent;
+    g.appendChild(text);
+  }
+}
+
+// ============================================================
+// DIAGONALS — for parallelograms, rhombuses, trapeziums
+// ============================================================
+function drawDiagonals(g, shape) {
+  const verts = shape.vertices;
+  if (verts.length !== 4) return;
+
+  // Diagonal 1: vertex 0 -> vertex 2
+  // Diagonal 2: vertex 1 -> vertex 3
+  const diagonals = [
+    { a: verts[0], b: verts[2], label: 'd₁' },
+    { a: verts[1], b: verts[3], label: 'd₂' }
+  ];
+
+  for (const d of diagonals) {
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.classList.add('diagonal-line');
+    line.setAttribute('x1', d.a.x);
+    line.setAttribute('y1', d.a.y);
+    line.setAttribute('x2', d.b.x);
+    line.setAttribute('y2', d.b.y);
+    g.appendChild(line);
+
+    // Diagonal length label, offset perpendicular to the diagonal
+    const mid = midpoint(d.a, d.b);
+    const length = dist(d.a, d.b);
+    const dir = norm(sub(d.b, d.a));
+    const perp = { x: -dir.y, y: dir.x };
+
+    // Push label perpendicular to the diagonal, towards canvas centre if possible
+    // We'll go slightly off the midpoint so it doesn't overlap with the other diagonal
+    const labelX = mid.x + perp.x * 12;
+    const labelY = mid.y + perp.y * 12;
+
+    const labelText = `${d.label} = ${length.toFixed(0)}`;
+    const padding = 4;
+    const charWidth = 6.2;
+    const textW = labelText.length * charWidth + padding * 2;
+    const textH = 16;
+
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.classList.add('diagonal-label-bg');
+    bg.setAttribute('x', labelX - textW / 2);
+    bg.setAttribute('y', labelY - textH / 2);
+    bg.setAttribute('width', textW);
+    bg.setAttribute('height', textH);
+    bg.setAttribute('rx', 4);
+    g.appendChild(bg);
+
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.classList.add('diagonal-label');
+    text.setAttribute('x', labelX);
+    text.setAttribute('y', labelY);
+    text.textContent = labelText;
+    g.appendChild(text);
+  }
+
+  // For rhombuses and parallelograms: highlight intersection point (centre)
+  if (shape.type === 'rhombus' || shape.type === 'parallelogram') {
+    const intersection = intersectionOfDiagonals(verts);
+    if (intersection) {
+      const cx = intersection.x;
+      const cy = intersection.y;
+      const dotEl = document.createElementNS(SVG_NS, 'circle');
+      dotEl.classList.add('diagonal-midpoint');
+      dotEl.setAttribute('cx', cx);
+      dotEl.setAttribute('cy', cy);
+      dotEl.setAttribute('r', 4);
+      g.appendChild(dotEl);
+
+      // For rhombus: show a small 90° marker at the intersection
+      if (shape.type === 'rhombus') {
+        drawDiagonalRightAngle(g, intersection, verts);
+      }
+    }
+  }
+}
+
+function intersectionOfDiagonals(verts) {
+  // For our four shapes, diagonals always meet inside (or on the midpoint).
+  // Use line-line intersection.
+  const x1 = verts[0].x, y1 = verts[0].y;
+  const x2 = verts[2].x, y2 = verts[2].y;
+  const x3 = verts[1].x, y3 = verts[1].y;
+  const x4 = verts[3].x, y4 = verts[3].y;
+
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denom) < 0.0001) return null;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+  return {
+    x: x1 + t * (x2 - x1),
+    y: y1 + t * (y2 - y1)
+  };
+}
+
+function drawDiagonalRightAngle(g, intersection, verts) {
+  // Draw a small right-angle marker on one quadrant of the intersection.
+  const d1Dir = norm(sub(verts[2], verts[0]));
+  const d2Dir = norm(sub(verts[3], verts[1]));
+  const s = 9;
+  const p1 = { x: intersection.x + d1Dir.x * s, y: intersection.y + d1Dir.y * s };
+  const p2 = { x: intersection.x + d1Dir.x * s + d2Dir.x * s, y: intersection.y + d1Dir.y * s + d2Dir.y * s };
+  const p3 = { x: intersection.x + d2Dir.x * s, y: intersection.y + d2Dir.y * s };
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.classList.add('diagonal-intersection-arc');
+  path.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y}`);
+  g.appendChild(path);
+}
+
+// ============================================================
+// ANGLES on shape vertices
+// ============================================================
+function drawAngles(g, shape) {
+  const verts = shape.vertices;
+  const n = verts.length;
+
+  for (let i = 0; i < n; i++) {
+    const prev = verts[(i - 1 + n) % n];
+    const curr = verts[i];
+    const next = verts[(i + 1) % n];
+
+    const angleRad = interiorAngle(prev, curr, next);
+    const angleDeg = rad2deg(angleRad);
+
+    const v1 = norm(sub(prev, curr));
+    const v2 = norm(sub(next, curr));
+    const arcRadius = 22;
+
+    if (Math.abs(angleDeg - 90) < 1.5) {
+      drawRightAngleMarker(g, curr, v1, v2);
+    } else {
+      const bisector = norm(add(v1, v2));
+      const testPoint = add(curr, mul(bisector, 5));
+      const inside = pointInPolygon(testPoint, verts);
+      const drawBisector = inside ? bisector : mul(bisector, -1);
+
+      const arcStart = { x: curr.x + arcRadius * v1.x, y: curr.y + arcRadius * v1.y };
+      const arcEnd = { x: curr.x + arcRadius * v2.x, y: curr.y + arcRadius * v2.y };
+      const largeArc = angleDeg > 180 ? 1 : 0;
+      const sweepFlag = arcSweepFlag(curr, v1, v2, drawBisector);
+      const pathD = `M ${arcStart.x} ${arcStart.y} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweepFlag} ${arcEnd.x} ${arcEnd.y}`;
+
+      const arc = document.createElementNS(SVG_NS, 'path');
+      arc.classList.add('angle-arc');
+      arc.setAttribute('d', pathD);
+      g.appendChild(arc);
+
+      const labelOffset = arcRadius + 14;
+      const labelX = curr.x + drawBisector.x * labelOffset;
+      const labelY = curr.y + drawBisector.y * labelOffset;
+      const labelText = `${angleDeg.toFixed(0)}°`;
+      const padding = 4;
+      const charWidth = 7;
+      const labelW = labelText.length * charWidth + padding * 2;
+      const labelH = 18;
+
+      const bg = document.createElementNS(SVG_NS, 'rect');
+      bg.classList.add('angle-label-bg');
+      bg.setAttribute('x', labelX - labelW / 2);
+      bg.setAttribute('y', labelY - labelH / 2);
+      bg.setAttribute('width', labelW);
+      bg.setAttribute('height', labelH);
+      bg.setAttribute('rx', 4);
+      g.appendChild(bg);
+
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.classList.add('angle-label');
+      label.setAttribute('x', labelX);
+      label.setAttribute('y', labelY);
+      label.textContent = labelText;
+      g.appendChild(label);
+    }
+  }
+}
+
+function arcSweepFlag(center, v1, v2, bisectorIn) {
+  const angle1 = Math.atan2(v1.y, v1.x);
+  const angle2 = Math.atan2(v2.y, v2.x);
+  function midForSweep(s) {
+    let delta = angle2 - angle1;
+    if (s === 1) {
+      if (delta < 0) delta += 2 * Math.PI;
+    } else {
+      if (delta > 0) delta -= 2 * Math.PI;
+    }
+    const midAngle = angle1 + delta / 2;
+    return { x: Math.cos(midAngle), y: Math.sin(midAngle) };
+  }
+  const m0 = midForSweep(0);
+  const m1 = midForSweep(1);
+  const d0 = m0.x * bisectorIn.x + m0.y * bisectorIn.y;
+  const d1 = m1.x * bisectorIn.x + m1.y * bisectorIn.y;
+  return d1 > d0 ? 1 : 0;
+}
+
+function drawRightAngleMarker(g, vertex, v1, v2) {
+  const s = 12;
+  const p1 = { x: vertex.x + v1.x * s, y: vertex.y + v1.y * s };
+  const p2 = { x: vertex.x + v1.x * s + v2.x * s, y: vertex.y + v1.y * s + v2.y * s };
+  const p3 = { x: vertex.x + v2.x * s, y: vertex.y + v2.y * s };
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.classList.add('right-angle-marker');
+  path.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y}`);
+  g.appendChild(path);
+
+  const bisector = norm(add(v1, v2));
+  const labelOffset = 28;
+  const labelX = vertex.x + bisector.x * labelOffset;
+  const labelY = vertex.y + bisector.y * labelOffset;
+  const bg = document.createElementNS(SVG_NS, 'rect');
+  bg.classList.add('angle-label-bg');
+  bg.setAttribute('x', labelX - 16);
+  bg.setAttribute('y', labelY - 9);
+  bg.setAttribute('width', 32);
+  bg.setAttribute('height', 18);
+  bg.setAttribute('rx', 4);
+  g.appendChild(bg);
+  const label = document.createElementNS(SVG_NS, 'text');
+  label.classList.add('angle-label');
+  label.setAttribute('x', labelX);
+  label.setAttribute('y', labelY);
+  label.textContent = '90°';
+  g.appendChild(label);
+}
+
+// ============================================================
+// SHAPE MARKS (ticks for equal sides, arrows for parallel)
+// ============================================================
+function drawShapeMarks(g, shape) {
+  const verts = shape.vertices;
+  const sides = [];
+  for (let i = 0; i < verts.length; i++) {
+    sides.push({
+      a: verts[i],
+      b: verts[(i + 1) % verts.length],
+      i
+    });
+  }
+
+  switch (shape.type) {
+    case 'equilateral':
+      sides.forEach(s => drawTickMarks(g, s.a, s.b, 1));
+      break;
+    case 'isosceles':
+      drawTickMarks(g, sides[0].a, sides[0].b, 1);
+      drawTickMarks(g, sides[2].a, sides[2].b, 1);
+      break;
+    case 'rhombus':
+      sides.forEach(s => drawTickMarks(g, s.a, s.b, 1));
+      break;
+    case 'parallelogram':
+      drawTickMarks(g, sides[0].a, sides[0].b, 1);
+      drawTickMarks(g, sides[2].a, sides[2].b, 1);
+      drawTickMarks(g, sides[1].a, sides[1].b, 2);
+      drawTickMarks(g, sides[3].a, sides[3].b, 2);
+      drawParallelMarks(g, sides[0].a, sides[0].b, 1);
+      drawParallelMarks(g, sides[2].a, sides[2].b, 1);
+      drawParallelMarks(g, sides[1].a, sides[1].b, 2);
+      drawParallelMarks(g, sides[3].a, sides[3].b, 2);
+      break;
+    case 'trapezium':
+      drawParallelMarks(g, sides[0].a, sides[0].b, 1);
+      drawParallelMarks(g, sides[2].a, sides[2].b, 1);
+      drawTickMarks(g, sides[1].a, sides[1].b, 1);
+      drawTickMarks(g, sides[3].a, sides[3].b, 1);
+      break;
+    case 'trapezium-right':
+      drawParallelMarks(g, sides[0].a, sides[0].b, 1);
+      drawParallelMarks(g, sides[2].a, sides[2].b, 1);
+      break;
+  }
+}
+
+function drawTickMarks(g, a, b, count) {
+  const mid = midpoint(a, b);
+  const dir = norm(sub(b, a));
+  const perp = { x: -dir.y, y: dir.x };
+  const tickLen = 6;
+  const spacing = 5;
+  const totalWidth = (count - 1) * spacing;
+  for (let i = 0; i < count; i++) {
+    const offset = -totalWidth / 2 + i * spacing;
+    const center = { x: mid.x + dir.x * offset, y: mid.y + dir.y * offset };
+    const p1 = { x: center.x + perp.x * tickLen / 2, y: center.y + perp.y * tickLen / 2 };
+    const p2 = { x: center.x - perp.x * tickLen / 2, y: center.y - perp.y * tickLen / 2 };
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.classList.add('equal-mark');
+    line.setAttribute('x1', p1.x);
+    line.setAttribute('y1', p1.y);
+    line.setAttribute('x2', p2.x);
+    line.setAttribute('y2', p2.y);
+    g.appendChild(line);
+  }
+}
+
+function drawParallelMarks(g, a, b, count) {
+  const mid = midpoint(a, b);
+  const dir = norm(sub(b, a));
+  const perp = { x: -dir.y, y: dir.x };
+  const arrowSize = 5;
+  const spacing = 4;
+  const totalWidth = (count - 1) * spacing;
+  for (let i = 0; i < count; i++) {
+    const offset = -totalWidth / 2 + i * spacing;
+    const center = { x: mid.x + dir.x * offset, y: mid.y + dir.y * offset };
+    const tip = { x: center.x + dir.x * arrowSize, y: center.y + dir.y * arrowSize };
+    const wing1 = { x: center.x - dir.x * arrowSize + perp.x * arrowSize, y: center.y - dir.y * arrowSize + perp.y * arrowSize };
+    const wing2 = { x: center.x - dir.x * arrowSize - perp.x * arrowSize, y: center.y - dir.y * arrowSize - perp.y * arrowSize };
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.classList.add('parallel-mark');
+    path.setAttribute('d', `M ${wing1.x} ${wing1.y} L ${tip.x} ${tip.y} L ${wing2.x} ${wing2.y} Z`);
+    g.appendChild(path);
+  }
+}
+
+// ============================================================
+// PROTRACTOR — draggable, rotatable, reads angles
+// ============================================================
+function createProtractor() {
+  const cx = state.canvasW / 2 + 60;
+  const cy = state.canvasH / 2 + 80;
+  state.protractor = {
+    centre: { x: cx, y: cy },
+    rotation: 0,         // radians; rotation of the 0° mark from the +X axis (pointing right by default)
+    radius: 120
+  };
+  document.getElementById('protractor-button').classList.add('active');
+}
+
+function removeProtractor() {
+  state.protractor = null;
+  document.getElementById('protractor-button').classList.remove('active');
+}
+
+function drawProtractor() {
+  const p = state.protractor;
+  if (!p) return;
+
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.classList.add('protractor-group');
+  g.setAttribute('data-protractor', 'true');
+
+  const cx = p.centre.x;
+  const cy = p.centre.y;
+  const R = p.radius;
+  const rot = p.rotation; // rotation angle in radians
+
+  // The protractor is a half-circle. By default, the flat baseline runs horizontally
+  // to the right (from centre, at angle = rot). The arc sweeps from rot (0°) over
+  // 180° in the CCW direction (in screen coords, that means UPWARD because Y is down).
+  //
+  // To make the protractor face UP visually (standard orientation), we want 0°
+  // on the right and 180° on the left, with the arc curving upward.
+  // In screen coords (Y down), going from angle 0 (right) to angle -180 (up over
+  // the top) sweeps the arc upward. So our 0..180 measurement maps to:
+  //   screenAngle = rot - measuredAngle (measured CCW from baseline, but screen Y is flipped)
+  //
+  // For simplicity, we'll compute each point as:
+  //   measured angle θ ∈ [0°, 180°]
+  //   screen position = centre + R * (cos(rot - θ_rad), sin(rot - θ_rad))
+  // This way θ=0 is at the right edge of baseline, θ=180 is at the left edge.
+
+  // ====== Body: half-circle (filled white-ish) ======
+  // Build the half-circle outline
+  const arcStartAngle = rot;                // θ = 0
+  const arcEndAngle = rot - Math.PI;        // θ = 180
+  const arcStart = { x: cx + R * Math.cos(arcStartAngle), y: cy + R * Math.sin(arcStartAngle) };
+  const arcEnd = { x: cx + R * Math.cos(arcEndAngle), y: cy + R * Math.sin(arcEndAngle) };
+  const bodyPath = `M ${arcStart.x} ${arcStart.y}
+                    A ${R} ${R} 0 0 0 ${arcEnd.x} ${arcEnd.y}
+                    L ${arcStart.x} ${arcStart.y} Z`;
+  const body = document.createElementNS(SVG_NS, 'path');
+  body.classList.add('protractor-body');
+  body.setAttribute('d', bodyPath);
+  g.appendChild(body);
+
+  // ====== Baseline (the flat edge along θ=0 to θ=180) ======
+  const baseline = document.createElementNS(SVG_NS, 'line');
+  baseline.classList.add('protractor-baseline');
+  baseline.setAttribute('x1', arcStart.x);
+  baseline.setAttribute('y1', arcStart.y);
+  baseline.setAttribute('x2', arcEnd.x);
+  baseline.setAttribute('y2', arcEnd.y);
+  g.appendChild(baseline);
+
+  // ====== Tick marks every 10° (with labels every 30°) ======
+  for (let deg = 0; deg <= 180; deg += 5) {
+    const measured = deg2rad(deg);
+    const screenAngle = rot - measured;
+    const isMajor = deg % 10 === 0;
+    const innerR = R - (isMajor ? 12 : 6);
+    const outerR = R - 1;
+
+    const inner = { x: cx + innerR * Math.cos(screenAngle), y: cy + innerR * Math.sin(screenAngle) };
+    const outer = { x: cx + outerR * Math.cos(screenAngle), y: cy + outerR * Math.sin(screenAngle) };
+    const tick = document.createElementNS(SVG_NS, 'line');
+    tick.classList.add(isMajor ? 'protractor-tick-major' : 'protractor-tick-minor');
+    tick.setAttribute('x1', inner.x);
+    tick.setAttribute('y1', inner.y);
+    tick.setAttribute('x2', outer.x);
+    tick.setAttribute('y2', outer.y);
+    g.appendChild(tick);
+
+    if (deg % 30 === 0 && deg !== 0 && deg !== 180) {
+      const labelR = R - 22;
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.classList.add('protractor-tick-label');
+      label.setAttribute('x', cx + labelR * Math.cos(screenAngle));
+      label.setAttribute('y', cy + labelR * Math.sin(screenAngle));
+      label.textContent = deg;
+      g.appendChild(label);
+    }
+  }
+
+  // 0° label
+  const zeroLabelR = R - 22;
+  const zeroLabelAngle = rot;
+  const zeroLabel = document.createElementNS(SVG_NS, 'text');
+  zeroLabel.classList.add('protractor-tick-label');
+  zeroLabel.setAttribute('x', cx + zeroLabelR * Math.cos(zeroLabelAngle) - 6 * Math.cos(zeroLabelAngle));
+  zeroLabel.setAttribute('y', cy + zeroLabelR * Math.sin(zeroLabelAngle) - 6 * Math.sin(zeroLabelAngle));
+  zeroLabel.textContent = '0';
+  g.appendChild(zeroLabel);
+
+  // 180° label
+  const oneEightyLabelAngle = rot - Math.PI;
+  const oneEightyLabel = document.createElementNS(SVG_NS, 'text');
+  oneEightyLabel.classList.add('protractor-tick-label');
+  oneEightyLabel.setAttribute('x', cx + zeroLabelR * Math.cos(oneEightyLabelAngle) - 8 * Math.cos(oneEightyLabelAngle));
+  oneEightyLabel.setAttribute('y', cy + zeroLabelR * Math.sin(oneEightyLabelAngle) - 8 * Math.sin(oneEightyLabelAngle));
+  oneEightyLabel.textContent = '180';
+  g.appendChild(oneEightyLabel);
+
+  // ====== Rotation handle (top of protractor at 90°) ======
+  const handleR = R - 2;
+  const handleAngle = rot - Math.PI / 2; // at θ = 90°
+  const handleX = cx + (R + 14) * Math.cos(handleAngle);
+  const handleY = cy + (R + 14) * Math.sin(handleAngle);
+
+  // Dashed line from centre out to the handle
+  const arm = document.createElementNS(SVG_NS, 'line');
+  arm.classList.add('protractor-rotation-arm');
+  arm.setAttribute('x1', cx);
+  arm.setAttribute('y1', cy);
+  arm.setAttribute('x2', handleX);
+  arm.setAttribute('y2', handleY);
+  g.appendChild(arm);
+
+  const handle = document.createElementNS(SVG_NS, 'circle');
+  handle.classList.add('protractor-rotation-handle');
+  handle.setAttribute('cx', handleX);
+  handle.setAttribute('cy', handleY);
+  handle.setAttribute('r', 7);
+  handle.addEventListener('pointerdown', e => onProtractorRotateStart(e));
+  g.appendChild(handle);
+
+  // ====== Centre point ======
+  const centre = document.createElementNS(SVG_NS, 'circle');
+  centre.classList.add('protractor-center');
+  centre.setAttribute('cx', cx);
+  centre.setAttribute('cy', cy);
+  centre.setAttribute('r', 6);
+  g.appendChild(centre);
+
+  // ====== Close button (positioned at top-right of bounding circle) ======
+  const closeAngle = rot - Math.PI / 4; // 45° up-right
+  const closeX = cx + (R - 16) * Math.cos(closeAngle);
+  const closeY = cy + (R - 16) * Math.sin(closeAngle);
+  const closeBtn = document.createElementNS(SVG_NS, 'circle');
+  closeBtn.classList.add('protractor-close-button');
+  closeBtn.setAttribute('cx', closeX);
+  closeBtn.setAttribute('cy', closeY);
+  closeBtn.setAttribute('r', 10);
+  closeBtn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    e.preventDefault();
+    removeProtractor();
+    redrawAll();
+  });
+  g.appendChild(closeBtn);
+
+  const closeX1 = document.createElementNS(SVG_NS, 'line');
+  closeX1.classList.add('protractor-close-x');
+  closeX1.setAttribute('x1', closeX - 4);
+  closeX1.setAttribute('y1', closeY - 4);
+  closeX1.setAttribute('x2', closeX + 4);
+  closeX1.setAttribute('y2', closeY + 4);
+  g.appendChild(closeX1);
+  const closeX2 = document.createElementNS(SVG_NS, 'line');
+  closeX2.classList.add('protractor-close-x');
+  closeX2.setAttribute('x1', closeX + 4);
+  closeX2.setAttribute('y1', closeY - 4);
+  closeX2.setAttribute('x2', closeX - 4);
+  closeX2.setAttribute('y2', closeY + 4);
+  g.appendChild(closeX2);
+
+  // ====== Make the body draggable for translation ======
+  body.addEventListener('pointerdown', e => onProtractorDragStart(e));
+
+  // ====== Live reading display: angle to nearest shape vertex ======
+  drawProtractorReading(g, p);
+
+  canvasSvg.appendChild(g);
+}
+
+function drawProtractorReading(g, p) {
+  // The reading shows the angle (relative to the baseline) of the nearest snap point.
+  // We snap to the nearest shape vertex within a reasonable distance from the centre.
+  // We also display TWO reference rays: one along the baseline (0°) and one to the
+  // nearest target — and the measured angle is between them.
+
+  // Find the closest vertex to the protractor centre
+  let target = null;
+  let bestDist = Infinity;
+  for (const shape of state.shapes) {
+    for (const vert of shape.vertices) {
+      const d = dist(vert, p.centre);
+      if (d < bestDist && d > 8) {
+        bestDist = d;
+        target = vert;
+      }
+    }
+  }
+
+  // Only show reading if there's a target within range
+  if (!target || bestDist > p.radius + 80) {
+    // Show neutral reading box at top
+    const cx = p.centre.x;
+    const cy = p.centre.y;
+    const labelX = cx;
+    const labelY = cy + p.radius + 22;
+
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.classList.add('protractor-reading-bg');
+    bg.setAttribute('x', labelX - 90);
+    bg.setAttribute('y', labelY - 12);
+    bg.setAttribute('width', 180);
+    bg.setAttribute('height', 24);
+    bg.setAttribute('rx', 6);
+    g.appendChild(bg);
+
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.classList.add('protractor-reading');
+    text.setAttribute('x', labelX);
+    text.setAttribute('y', labelY);
+    text.textContent = 'Drop on a vertex to measure';
+    g.appendChild(text);
+    return;
+  }
+
+  // Compute the angle from the baseline (rotation direction) to the target vector
+  const cx = p.centre.x;
+  const cy = p.centre.y;
+  const baselineDir = { x: Math.cos(p.rotation), y: Math.sin(p.rotation) };
+  const toTarget = norm(sub(target, p.centre));
+  // Dot product gives cos of angle; cross product determines sign
+  const dotVal = baselineDir.x * toTarget.x + baselineDir.y * toTarget.y;
+  const crossVal = baselineDir.x * toTarget.y - baselineDir.y * toTarget.x;
+  // In our half-circle layout, the arc goes from baseline (0°) sweeping over the top
+  // (negative Y direction in screen coords) — which corresponds to NEGATIVE cross
+  // value in screen coords. So we measure angle as:
+  //   measured = atan2(-cross, dot)  (so positive measurements correspond to the half-circle side)
+  const measured = Math.atan2(-crossVal, dotVal);
+  // measured ∈ [-π, π]. Values in [0, π] are inside the half-circle.
+  let measuredDeg = rad2deg(measured);
+
+  // Handle the -180 / +180 boundary cleanly — they're the same direction.
+  if (measuredDeg < -179.5) measuredDeg = 180;
+
+  // If the target is on the "wrong" side (below the baseline), measuredDeg is negative.
+  // We still display it but show a hint.
+  const onCorrectSide = measuredDeg >= 0 && measuredDeg <= 180;
+
+  // Draw a ray from centre out toward the target, ending at radius
+  const rayEnd = { x: cx + p.radius * toTarget.x, y: cy + p.radius * toTarget.y };
+  const ray = document.createElementNS(SVG_NS, 'line');
+  ray.classList.add('protractor-rotation-arm');
+  ray.setAttribute('x1', cx);
+  ray.setAttribute('y1', cy);
+  ray.setAttribute('x2', rayEnd.x);
+  ray.setAttribute('y2', rayEnd.y);
+  ray.style.strokeDasharray = '5 4';
+  ray.style.strokeWidth = '1.5';
+  ray.style.strokeOpacity = '0.85';
+  g.appendChild(ray);
+
+  // Small dot at the target
+  const targetDot = document.createElementNS(SVG_NS, 'circle');
+  targetDot.setAttribute('cx', target.x);
+  targetDot.setAttribute('cy', target.y);
+  targetDot.setAttribute('r', 4);
+  targetDot.setAttribute('fill', 'var(--protractor-color)');
+  targetDot.setAttribute('stroke', 'white');
+  targetDot.setAttribute('stroke-width', 1.5);
+  targetDot.style.pointerEvents = 'none';
+  g.appendChild(targetDot);
+
+  // Reading display below the protractor
+  const labelX = cx;
+  const labelY = cy + p.radius + 22;
+  const displayDeg = Math.abs(measuredDeg);
+  const labelText = `${displayDeg.toFixed(1)}°` + (onCorrectSide ? '' : '  (below baseline)');
+
+  const bg = document.createElementNS(SVG_NS, 'rect');
+  bg.classList.add('protractor-reading-bg');
+  const w = Math.max(100, labelText.length * 8 + 24);
+  bg.setAttribute('x', labelX - w / 2);
+  bg.setAttribute('y', labelY - 12);
+  bg.setAttribute('width', w);
+  bg.setAttribute('height', 24);
+  bg.setAttribute('rx', 6);
+  g.appendChild(bg);
+
+  const text = document.createElementNS(SVG_NS, 'text');
+  text.classList.add('protractor-reading');
+  text.setAttribute('x', labelX);
+  text.setAttribute('y', labelY);
+  text.textContent = labelText;
+  g.appendChild(text);
+}
+
+// ============================================================
+// PROTRACTOR INTERACTIONS
+// ============================================================
+function onProtractorDragStart(event) {
+  event.stopPropagation();
+  event.preventDefault();
+  const pt = getCanvasPoint(event);
+  state.drag = {
+    type: 'protractor-translate',
+    startCanvas: pt,
+    startCentre: { ...state.protractor.centre }
+  };
+  event.target.setPointerCapture(event.pointerId);
+}
+
+function onProtractorRotateStart(event) {
+  event.stopPropagation();
+  event.preventDefault();
+  const pt = getCanvasPoint(event);
+  state.drag = {
+    type: 'protractor-rotate',
+    startCanvas: pt,
+    startRotation: state.protractor.rotation,
+    // Compute the initial angle from centre to pointer
+    startPointerAngle: Math.atan2(
+      pt.y - state.protractor.centre.y,
+      pt.x - state.protractor.centre.x
+    )
+  };
+  event.target.setPointerCapture(event.pointerId);
+  event.target.classList.add('dragging');
+}
+
+// ============================================================
+// DRAGGING — vertex handles and shape body
+// ============================================================
+function onVertexPointerDown(event, shape, vertexIndex) {
+  event.stopPropagation();
+  event.preventDefault();
+  selectShape(shape.id);
+  const pt = getCanvasPoint(event);
+  state.drag = {
+    type: 'vertex',
+    shapeId: shape.id,
+    vertexIndex,
+    startCanvas: pt,
+    startVertex: { ...shape.vertices[vertexIndex] }
+  };
+  event.target.setPointerCapture(event.pointerId);
+  event.target.classList.add('dragging');
+}
+
+function onShapeBodyPointerDown(event, shape) {
+  event.stopPropagation();
+  event.preventDefault();
+  selectShape(shape.id);
+  const pt = getCanvasPoint(event);
+  state.drag = {
+    type: 'translate',
+    shapeId: shape.id,
+    startCanvas: pt,
+    startVertices: shape.vertices.map(p => ({ ...p }))
+  };
+  event.target.setPointerCapture(event.pointerId);
+}
+
+function onCanvasPointerMove(event) {
+  if (!state.drag) return;
+  const pt = getCanvasPoint(event);
+
+  if (state.drag.type === 'vertex') {
+    const shape = state.shapes.find(s => s.id === state.drag.shapeId);
+    if (!shape) return;
+    const newPos = {
+      x: state.drag.startVertex.x + (pt.x - state.drag.startCanvas.x),
+      y: state.drag.startVertex.y + (pt.y - state.drag.startCanvas.y)
+    };
+    applyConstraints(shape, state.drag.vertexIndex, newPos);
+  } else if (state.drag.type === 'translate') {
+    const shape = state.shapes.find(s => s.id === state.drag.shapeId);
+    if (!shape) return;
+    const dx = pt.x - state.drag.startCanvas.x;
+    const dy = pt.y - state.drag.startCanvas.y;
+    shape.vertices = state.drag.startVertices.map(p => ({ ...p }));
+    translateShape(shape, dx, dy);
+  } else if (state.drag.type === 'protractor-translate') {
+    const dx = pt.x - state.drag.startCanvas.x;
+    const dy = pt.y - state.drag.startCanvas.y;
+    const newCentre = {
+      x: clamp(state.drag.startCentre.x + dx, 30, state.canvasW - 30),
+      y: clamp(state.drag.startCentre.y + dy, 30, state.canvasH - 30)
+    };
+    state.protractor.centre = newCentre;
+  } else if (state.drag.type === 'protractor-rotate') {
+    const currentPointerAngle = Math.atan2(
+      pt.y - state.protractor.centre.y,
+      pt.x - state.protractor.centre.x
+    );
+    const angleDelta = currentPointerAngle - state.drag.startPointerAngle;
+    // The rotation handle is positioned at θ=90° (rotation - π/2)
+    // When user drags the handle, we want the protractor to rotate to match.
+    state.protractor.rotation = state.drag.startRotation + angleDelta;
+  }
+
+  redrawAll();
+}
+
+function onCanvasPointerUp(event) {
+  if (state.drag) {
+    document.querySelectorAll('.vertex-handle.dragging, .protractor-rotation-handle.dragging').forEach(el => {
+      el.classList.remove('dragging');
+    });
+    state.drag = null;
+    redrawAll();
+  }
+}
+
+function getCanvasPoint(event) {
+  const rect = canvasSvg.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * state.canvasW,
+    y: ((event.clientY - rect.top) / rect.height) * state.canvasH
+  };
+}
+
+canvasSvg.addEventListener('pointermove', onCanvasPointerMove);
+canvasSvg.addEventListener('pointerup', onCanvasPointerUp);
+canvasSvg.addEventListener('pointercancel', onCanvasPointerUp);
+
+canvasSvg.addEventListener('pointerdown', e => {
+  if (e.target === canvasSvg) {
+    selectShape(null);
+  }
+});
+
+// ============================================================
+// SELECTION & STATUS
+// ============================================================
+function selectShape(id) {
+  state.selectedId = id;
+  redrawAll();
+}
+
+function updateStatus() {
+  const shape = state.shapes.find(s => s.id === state.selectedId);
+  if (shape) {
+    statusDot.classList.remove('idle');
+    statusText.textContent = `${SHAPE_RULES[shape.type].name} selected · drag vertices or body`;
+  } else {
+    statusDot.classList.add('idle');
+    statusText.textContent = state.shapes.length === 0
+      ? 'No shapes yet — pick one from the palette'
+      : 'Click a shape to select it';
+  }
+}
+
+// ============================================================
+// CHARACTERISTICS — live tip generation for each shape type
+// ============================================================
+function getCharacteristics(shape) {
+  const verts = shape.vertices;
+  const n = verts.length;
+
+  // Compute side lengths and interior angles
+  const sides = [];
+  for (let i = 0; i < n; i++) {
+    sides.push(dist(verts[i], verts[(i + 1) % n]));
+  }
+  const angles = [];
+  for (let i = 0; i < n; i++) {
+    const prev = verts[(i - 1 + n) % n];
+    const curr = verts[i];
+    const next = verts[(i + 1) % n];
+    angles.push(rad2deg(interiorAngle(prev, curr, next)));
+  }
+  const angleSum = angles.reduce((a, b) => a + b, 0);
+
+  const items = [];
+
+  switch (shape.type) {
+    case 'equilateral': {
+      const allEqual = sides.every(s => approxEqual(s, sides[0], 1));
+      const all60 = angles.every(a => approxEqual(a, 60, 1));
+      items.push({
+        kind: allEqual ? 'verified' : 'failed',
+        text: `All three sides are equal: <span class="characteristic-value">${sides.map(s => s.toFixed(0)).join(' = ')}</span>`
+      });
+      items.push({
+        kind: all60 ? 'verified' : 'failed',
+        text: `Every interior angle is exactly <span class="characteristic-value">60°</span>`
+      });
+      items.push({
+        kind: 'info',
+        text: `It has <strong>3 axes of symmetry</strong> — one through each vertex to the midpoint of the opposite side.`
+      });
+      items.push({
+        kind: 'info',
+        text: `Angle sum: <span class="characteristic-value">${angleSum.toFixed(0)}°</span> (always 180° for any triangle).`
+      });
+      items.push({
+        kind: 'info',
+        text: `It is a <strong>regular polygon</strong> and also a special case of an isosceles triangle.`
+      });
+      break;
+    }
+    case 'isosceles': {
+      // Legs are sides 0 (apex→right) and 2 (left→apex)
+      const leg1 = sides[0];
+      const leg2 = sides[2];
+      const base = sides[1];
+      const apexAngle = angles[0];
+      const baseAngleR = angles[1];
+      const baseAngleL = angles[2];
+      const legsEqual = approxEqual(leg1, leg2, 0.5);
+      const baseAnglesEqual = approxEqual(baseAngleR, baseAngleL, 0.5);
+      items.push({
+        kind: legsEqual ? 'verified' : 'failed',
+        text: `The two legs are equal: <span class="characteristic-value">${leg1.toFixed(0)} = ${leg2.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: baseAnglesEqual ? 'verified' : 'failed',
+        text: `Base angles are equal: <span class="characteristic-value">${baseAngleR.toFixed(0)}° = ${baseAngleL.toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'info',
+        text: `The apex angle is <span class="characteristic-value">${apexAngle.toFixed(0)}°</span>; base angles + apex angle = 180°.`
+      });
+      items.push({
+        kind: 'info',
+        text: `Base length: <span class="characteristic-value">${base.toFixed(0)}</span>. It has <strong>1 axis of symmetry</strong> — the perpendicular bisector of the base.`
+      });
+      if (approxEqual(apexAngle, 60, 1) && legsEqual && approxEqual(leg1, base, 0.5)) {
+        items.push({
+          kind: 'info',
+          text: `Right now this looks <strong>equilateral</strong> — a special isosceles triangle where all sides match.`
+        });
+      }
+      break;
+    }
+    case 'rhombus': {
+      // Diagonals
+      const d1 = dist(verts[0], verts[2]);
+      const d2 = dist(verts[1], verts[3]);
+      const intersection = intersectionOfDiagonals(verts);
+      // Check diagonals bisect each other
+      const m1 = midpoint(verts[0], verts[2]);
+      const m2 = midpoint(verts[1], verts[3]);
+      const bisects = dist(m1, m2) < 0.5;
+      // Perpendicular check
+      const d1Vec = norm(sub(verts[2], verts[0]));
+      const d2Vec = norm(sub(verts[3], verts[1]));
+      const perpDot = Math.abs(dot(d1Vec, d2Vec));
+      const isPerp = perpDot < 0.01;
+
+      const allEqual = sides.every(s => approxEqual(s, sides[0], 0.5));
+      const oppAnglesEqual = approxEqual(angles[0], angles[2], 0.5) && approxEqual(angles[1], angles[3], 0.5);
+
+      items.push({
+        kind: allEqual ? 'verified' : 'failed',
+        text: `All four sides are equal: <span class="characteristic-value">${sides[0].toFixed(0)} = ${sides[1].toFixed(0)} = ${sides[2].toFixed(0)} = ${sides[3].toFixed(0)}</span>`
+      });
+      items.push({
+        kind: oppAnglesEqual ? 'verified' : 'failed',
+        text: `Opposite angles are equal: <span class="characteristic-value">${angles[0].toFixed(0)}° = ${angles[2].toFixed(0)}°</span> and <span class="characteristic-value">${angles[1].toFixed(0)}° = ${angles[3].toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'verified',
+        text: `Consecutive angles sum to 180°: <span class="characteristic-value">${angles[0].toFixed(0)}° + ${angles[1].toFixed(0)}° = ${(angles[0] + angles[1]).toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'verified',
+        text: `Diagonals: <span class="characteristic-value">d₁ = ${d1.toFixed(0)}</span>, <span class="characteristic-value">d₂ = ${d2.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: isPerp ? 'verified' : 'failed',
+        text: `Diagonals are <strong>perpendicular</strong> (cross at 90°).`
+      });
+      items.push({
+        kind: bisects ? 'verified' : 'failed',
+        text: `Diagonals <strong>bisect each other</strong> at the centre.`
+      });
+      items.push({
+        kind: 'info',
+        text: `Area using diagonals: ½ × d₁ × d₂ = <span class="characteristic-value">${(0.5 * d1 * d2).toFixed(0)}</span>`
+      });
+      if (approxEqual(d1, d2, 0.5)) {
+        items.push({
+          kind: 'info',
+          text: `Right now d₁ = d₂, so this rhombus is actually a <strong>square</strong>!`
+        });
+      }
+      break;
+    }
+    case 'parallelogram': {
+      const d1 = dist(verts[0], verts[2]);
+      const d2 = dist(verts[1], verts[3]);
+      const m1 = midpoint(verts[0], verts[2]);
+      const m2 = midpoint(verts[1], verts[3]);
+      const bisects = dist(m1, m2) < 0.5;
+      const oppSidesEqual = approxEqual(sides[0], sides[2], 0.5) && approxEqual(sides[1], sides[3], 0.5);
+      const oppAnglesEqual = approxEqual(angles[0], angles[2], 0.5) && approxEqual(angles[1], angles[3], 0.5);
+      // Parallel check: direction vectors of opposite sides match
+      const side0Dir = norm(sub(verts[1], verts[0]));
+      const side2Dir = norm(sub(verts[3], verts[2]));
+      // They should be antiparallel (since polygon is traversed in order)
+      const parallel02 = Math.abs(Math.abs(dot(side0Dir, side2Dir)) - 1) < 0.01;
+      const allSidesEqual = sides.every(s => approxEqual(s, sides[0], 0.5));
+      const hasRightAngle = angles.some(a => approxEqual(a, 90, 1));
+
+      items.push({
+        kind: oppSidesEqual ? 'verified' : 'failed',
+        text: `Opposite sides are equal: <span class="characteristic-value">${sides[0].toFixed(0)} = ${sides[2].toFixed(0)}</span> and <span class="characteristic-value">${sides[1].toFixed(0)} = ${sides[3].toFixed(0)}</span>`
+      });
+      items.push({
+        kind: parallel02 ? 'verified' : 'failed',
+        text: `Opposite sides are <strong>parallel</strong>.`
+      });
+      items.push({
+        kind: oppAnglesEqual ? 'verified' : 'failed',
+        text: `Opposite angles are equal: <span class="characteristic-value">${angles[0].toFixed(0)}° = ${angles[2].toFixed(0)}°</span> and <span class="characteristic-value">${angles[1].toFixed(0)}° = ${angles[3].toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'verified',
+        text: `Consecutive angles supplementary: <span class="characteristic-value">${angles[0].toFixed(0)}° + ${angles[1].toFixed(0)}° = ${(angles[0] + angles[1]).toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'verified',
+        text: `Diagonals: <span class="characteristic-value">d₁ = ${d1.toFixed(0)}</span>, <span class="characteristic-value">d₂ = ${d2.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: bisects ? 'verified' : 'failed',
+        text: `Diagonals <strong>bisect each other</strong> (but are not generally equal or perpendicular).`
+      });
+      if (allSidesEqual) {
+        items.push({
+          kind: 'info',
+          text: `All four sides are equal — this parallelogram is actually a <strong>rhombus</strong>.`
+        });
+      }
+      if (hasRightAngle) {
+        items.push({
+          kind: 'info',
+          text: `One angle is 90° — this parallelogram is actually a <strong>rectangle</strong>${allSidesEqual ? ' (and a square)' : ''}.`
+        });
+      }
+      break;
+    }
+    case 'trapezium': {
+      // Legs are sides 1 (top-right → bottom-right) and 3 (bottom-left → top-left)
+      const top = sides[0];
+      const right = sides[1];
+      const bottom = sides[2];
+      const left = sides[3];
+      const legsEqual = approxEqual(right, left, 0.5);
+      // Top and bottom should be parallel (both horizontal in our setup)
+      const topDir = norm(sub(verts[1], verts[0]));
+      const botDir = norm(sub(verts[2], verts[3]));
+      const parallelTopBot = Math.abs(Math.abs(dot(topDir, botDir)) - 1) < 0.01;
+      // Base angle pairs: at vertex 0 (top-left) and vertex 1 (top-right)
+      const topLeftAng = angles[0];
+      const topRightAng = angles[1];
+      const botRightAng = angles[2];
+      const botLeftAng = angles[3];
+      const topAnglesEqual = approxEqual(topLeftAng, topRightAng, 0.5);
+      const botAnglesEqual = approxEqual(botRightAng, botLeftAng, 0.5);
+
+      const d1 = dist(verts[0], verts[2]);
+      const d2 = dist(verts[1], verts[3]);
+      const diagonalsEqual = approxEqual(d1, d2, 0.5);
+
+      items.push({
+        kind: parallelTopBot ? 'verified' : 'failed',
+        text: `Top and bottom are <strong>parallel</strong>: top = <span class="characteristic-value">${top.toFixed(0)}</span>, bottom = <span class="characteristic-value">${bottom.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: legsEqual ? 'verified' : 'failed',
+        text: `The two legs are equal: <span class="characteristic-value">${right.toFixed(0)} = ${left.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: topAnglesEqual ? 'verified' : 'failed',
+        text: `Top-base angles equal: <span class="characteristic-value">${topLeftAng.toFixed(0)}° = ${topRightAng.toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: botAnglesEqual ? 'verified' : 'failed',
+        text: `Bottom-base angles equal: <span class="characteristic-value">${botRightAng.toFixed(0)}° = ${botLeftAng.toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: diagonalsEqual ? 'verified' : 'failed',
+        text: `Diagonals are equal: <span class="characteristic-value">d₁ = ${d1.toFixed(0)} = d₂ = ${d2.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: 'info',
+        text: `It has <strong>1 axis of symmetry</strong> — the vertical line through the midpoints of the two parallel sides.`
+      });
+      items.push({
+        kind: 'info',
+        text: `Area: ½ × (top + bottom) × height = ½ × (${top.toFixed(0)} + ${bottom.toFixed(0)}) × h`
+      });
+      break;
+    }
+    case 'trapezium-right': {
+      const top = sides[0];
+      const right = sides[1];
+      const bottom = sides[2];
+      const left = sides[3];
+      const topLeftAng = angles[0];
+      const botLeftAng = angles[3];
+      const topRightAng = angles[1];
+      const botRightAng = angles[2];
+
+      const topDir = norm(sub(verts[1], verts[0]));
+      const botDir = norm(sub(verts[2], verts[3]));
+      const parallelTopBot = Math.abs(Math.abs(dot(topDir, botDir)) - 1) < 0.01;
+
+      items.push({
+        kind: parallelTopBot ? 'verified' : 'failed',
+        text: `Top and bottom are <strong>parallel</strong>: top = <span class="characteristic-value">${top.toFixed(0)}</span>, bottom = <span class="characteristic-value">${bottom.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: approxEqual(topLeftAng, 90, 1) ? 'verified' : 'failed',
+        text: `Top-left angle is 90°: <span class="characteristic-value">${topLeftAng.toFixed(1)}°</span>`
+      });
+      items.push({
+        kind: approxEqual(botLeftAng, 90, 1) ? 'verified' : 'failed',
+        text: `Bottom-left angle is 90°: <span class="characteristic-value">${botLeftAng.toFixed(1)}°</span>`
+      });
+      items.push({
+        kind: 'verified',
+        text: `Right-side angles sum to 180°: <span class="characteristic-value">${topRightAng.toFixed(0)}° + ${botRightAng.toFixed(0)}° = ${(topRightAng + botRightAng).toFixed(0)}°</span>`
+      });
+      items.push({
+        kind: 'info',
+        text: `Left side acts as the height: <span class="characteristic-value">${left.toFixed(0)}</span>. Slant side: <span class="characteristic-value">${right.toFixed(0)}</span>`
+      });
+      items.push({
+        kind: 'info',
+        text: `Area: ½ × (top + bottom) × height = ½ × (${top.toFixed(0)} + ${bottom.toFixed(0)}) × ${left.toFixed(0)} = <span class="characteristic-value">${(0.5 * (top + bottom) * left).toFixed(0)}</span>`
+      });
+      if (approxEqual(top, bottom, 1)) {
+        items.push({
+          kind: 'info',
+          text: `Top equals bottom — this is actually a <strong>rectangle</strong> right now.`
+        });
+      }
+      break;
+    }
+  }
+
+  return items;
+}
+
+// ============================================================
+// INFO PANEL — measurements + characteristics
+// ============================================================
+function updateInfoPanel() {
+  const shape = state.shapes.find(s => s.id === state.selectedId);
+  if (!shape) {
+    infoPanel.innerHTML = '<div class="info-empty">Select a shape to see its measurements and special characteristics</div>';
+    return;
+  }
+
+  const verts = shape.vertices;
+  const n = verts.length;
+  const angles = [];
+  for (let i = 0; i < n; i++) {
+    const prev = verts[(i - 1 + n) % n];
+    const curr = verts[i];
+    const next = verts[(i + 1) % n];
+    angles.push(rad2deg(interiorAngle(prev, curr, next)));
+  }
+  const sides = [];
+  for (let i = 0; i < n; i++) {
+    sides.push(dist(verts[i], verts[(i + 1) % n]));
+  }
+  const angleSum = angles.reduce((a, b) => a + b, 0);
+  const perimeter = sides.reduce((a, b) => a + b, 0);
+  const area = polygonArea(verts);
+
+  let measurementsHtml = `
+    <div class="info-grid">
+      <div class="info-cell">
+        <span class="info-label">Type</span>
+        <span class="info-value">${SHAPE_RULES[shape.type].name}</span>
+      </div>
+      <div class="info-cell">
+        <span class="info-label">Vertices</span>
+        <span class="info-value">${n}</span>
+      </div>
+      <div class="info-cell">
+        <span class="info-label">Perimeter</span>
+        <span class="info-value">${perimeter.toFixed(1)} px</span>
+      </div>
+      <div class="info-cell">
+        <span class="info-label">Area</span>
+        <span class="info-value">${area.toFixed(0)} px²</span>
+      </div>
+      <div class="info-cell">
+        <span class="info-label">Angle sum</span>
+        <span class="info-value">${angleSum.toFixed(0)}°</span>
+      </div>
+      <div class="info-cell">
+        <span class="info-label">Angles</span>
+        <span class="info-value">${angles.map(a => a.toFixed(0) + '°').join(', ')}</span>
+      </div>
+    </div>
+  `;
+
+  // Characteristics tips
+  let tipsHtml = '';
+  if (state.showTips) {
+    const characteristics = getCharacteristics(shape);
+    const rowsHtml = characteristics.map(c => `
+      <div class="characteristic-row">
+        <div class="characteristic-icon ${c.kind}">
+          ${c.kind === 'verified' ?
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' :
+            c.kind === 'failed' ?
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' :
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+          }
+        </div>
+        <div class="characteristic-text">${c.text}</div>
+      </div>
+    `).join('');
+
+    tipsHtml = `
+      <div class="characteristics-card">
+        <div class="characteristics-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v14h6V7z"></path>
+          </svg>
+          Special Characteristics of a ${SHAPE_RULES[shape.type].name}
+        </div>
+        ${rowsHtml}
+      </div>
+    `;
+  }
+
+  infoPanel.innerHTML = measurementsHtml + tipsHtml;
+}
+
+// ============================================================
+// PALETTE BUTTON HANDLERS
+// ============================================================
+document.querySelectorAll('.palette-button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.getAttribute('data-shape');
+    const shape = createShape(type);
+    selectShape(shape.id);
+    btn.style.transform = 'translateY(1px) scale(0.97)';
+    setTimeout(() => { btn.style.transform = ''; }, 150);
+    setTimeout(checkRulesAutoShow, 50);
+  });
+});
+
+// ============================================================
+// PROTRACTOR BUTTON
+// ============================================================
+const protractorButton = document.getElementById('protractor-button');
+protractorButton.addEventListener('click', () => {
+  if (state.protractor) {
+    removeProtractor();
+  } else {
+    createProtractor();
+    showProtractorHint('Drag the protractor body to move it, and the orange dot at the top to rotate. The reading at the bottom shows the angle from the baseline to the nearest vertex.');
+  }
+  redrawAll();
+});
+
+function showProtractorHint(text) {
+  protractorHint.textContent = text;
+  protractorHint.style.left = '50%';
+  protractorHint.style.top = '20px';
+  protractorHint.style.transform = 'translateX(-50%)';
+  protractorHint.classList.add('visible');
+  setTimeout(() => protractorHint.classList.remove('visible'), 5500);
+}
+
+// ============================================================
+// TOGGLES
+// ============================================================
+function setupToggle(elId, key, onChange) {
+  const el = document.getElementById(elId);
+  el.addEventListener('click', () => {
+    const isActive = el.classList.toggle('active');
+    state[key] = isActive;
+    if (onChange) onChange(isActive);
+    redrawAll();
+  });
+}
+setupToggle('toggle-sides', 'showSides');
+setupToggle('toggle-marks', 'showMarks');
+setupToggle('toggle-diagonals', 'showDiagonals');
+setupToggle('toggle-tips', 'showTips');
+setupToggle('toggle-grid', 'showGrid', (active) => {
+  canvasWrap.style.backgroundImage = active
+    ? `linear-gradient(to right, rgba(149, 117, 205, 0.06) 1px, transparent 1px),
+       linear-gradient(to bottom, rgba(149, 117, 205, 0.06) 1px, transparent 1px)`
+    : 'none';
+});
+
+// ============================================================
+// ACTION BUTTONS
+// ============================================================
+document.getElementById('duplicate-button').addEventListener('click', () => {
+  const shape = state.shapes.find(s => s.id === state.selectedId);
+  if (!shape) return;
+  const duplicate = {
+    id: state.nextId++,
+    type: shape.type,
+    vertices: shape.vertices.map(p => ({ x: p.x + 30, y: p.y + 30 })),
+    element: null
+  };
+  state.shapes.push(duplicate);
+  selectShape(duplicate.id);
+});
+
+document.getElementById('delete-button').addEventListener('click', () => {
+  if (state.selectedId === null) return;
+  state.shapes = state.shapes.filter(s => s.id !== state.selectedId);
+  selectShape(null);
+});
+
+document.getElementById('clear-button').addEventListener('click', () => {
+  if (state.shapes.length === 0 && !state.protractor) return;
+  if (confirm('Clear all shapes (and protractor) from the canvas?')) {
+    state.shapes = [];
+    removeProtractor();
+    selectShape(null);
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId !== null) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    state.shapes = state.shapes.filter(s => s.id !== state.selectedId);
+    selectShape(null);
+  }
+});
+
+// ============================================================
+// HELP / RULES POPUP
+// ============================================================
+const helpButton = document.getElementById('help-button');
+const rulesClose = document.getElementById('rules-popup-close');
+
+helpButton.addEventListener('click', () => showRulesForSelection());
+rulesClose.addEventListener('click', () => rulesPopup.classList.remove('visible'));
+
+function showRulesForSelection() {
+  const shape = state.shapes.find(s => s.id === state.selectedId);
+  if (!shape) {
+    rulesTitle.textContent = 'No shape selected';
+    rulesContent.innerHTML = '<p>Add a shape first, then click the help button to see the rules that govern how it can be manipulated.</p>';
+  } else {
+    const info = SHAPE_RULES[shape.type];
+    rulesTitle.textContent = info.name + ' — Rules';
+    rulesContent.innerHTML = '<ul>' + info.rules.map(r => `<li>${r}</li>`).join('') + '</ul>';
+  }
+  rulesPopup.classList.add('visible');
+}
+
+let lastShapeCount = 0;
+function checkRulesAutoShow() {
+  if (state.shapes.length > lastShapeCount && state.selectedId !== null) {
+    showRulesForSelection();
+    setTimeout(() => {
+      rulesPopup.classList.remove('visible');
+    }, 4500);
+  }
+  lastShapeCount = state.shapes.length;
+}
+
+// ============================================================
+// PRINT
+// ============================================================
+document.getElementById('print-button').addEventListener('click', () => {
+  window.print();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+resizeCanvas();
+updateStatus();
+
+</script>
+<!-- ============================================================
+     QUIZ SECTION — Geometry Revision & Testing
+     ============================================================ -->
+<section class="quiz-wrapper" id="quiz-wrapper">
+  <div class="quiz-section-banner">
+    <span class="quiz-eyebrow">Revision &amp; Quiz</span>
+    <h2>Test the Properties of Each Shape &amp; Angle</h2>
+    <p>
+      Pick a topic below to revise it on its own. Every question shows a figure with the angles
+      marked — work out the missing angle or choose the property that always holds. You get instant
+      feedback and a full worked explanation after each answer.
+    </p>
+  </div>
+
+  <!-- Topic chooser -->
+  <div class="topic-grid" id="topic-grid"></div>
+
+  <!-- Quiz runner (hidden until a topic is chosen) -->
+  <div class="quiz-runner" id="quiz-runner">
+    <div class="quiz-runner-head">
+      <div class="quiz-runner-titlewrap">
+        <div class="quiz-runner-badge" id="runner-badge"></div>
+        <div>
+          <div class="quiz-runner-title" id="runner-title">Topic</div>
+          <div class="quiz-runner-sub" id="runner-sub">Revision quiz</div>
+        </div>
+      </div>
+      <button class="quiz-back-button" id="quiz-back-button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        All topics
+      </button>
+    </div>
+
+    <div class="quiz-progress-strip" id="quiz-progress-strip">
+      <span class="quiz-progress-count" id="quiz-progress-count">1 / 8</span>
+      <div class="quiz-progress-track"><div class="quiz-progress-fill" id="quiz-progress-fill"></div></div>
+      <span class="quiz-score-pill" id="quiz-score-pill">0 correct</span>
+    </div>
+
+    <div id="quiz-stage"></div>
+  </div>
+</section>
+
+
+<script>
+
+// ============================================================
+// QUIZ MODULE
+// ============================================================
+(function () {
+  'use strict';
+
+  // ---- small math/util helpers (scoped to quiz) ----
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  function toRad(d) { return d * Math.PI / 180; }
+  function fmt(n) { return Math.round(n * 10) / 10; }
+
+  // Build a set of 4 MCQ options around a correct numeric value.
+  function numericOptions(correct, spread) {
+    spread = spread || 1;
+    const set = new Set([correct]);
+    const deltas = [10, 20, -10, 15, -15, 30, 5, -5, 25, 40, -20, 45];
+    let di = 0;
+    while (set.size < 4 && di < deltas.length) {
+      let cand = correct + deltas[di] * spread;
+      if (cand > 0 && cand < 360 && !set.has(cand)) set.add(cand);
+      di++;
+    }
+    // pad if still short
+    let extra = 8;
+    while (set.size < 4) {
+      let cand = correct + (randInt(-6, 6) * 5);
+      if (cand > 0 && cand < 360 && !set.has(cand)) set.add(cand);
+      extra--; if (extra < 0) break;
+    }
+    return shuffle(Array.from(set)).map(v => ({ label: v + '°', value: v }));
+  }
+
+  // ============================================================
+  // SVG FIGURE BUILDER
+  // Coordinates use a 0,0 top-left system; y is flipped only where
+  // noted. Returns an SVG string. All figures show angles.
+  // ============================================================
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  function svgOpen(w, h) {
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="${SVGNS}">`;
+  }
+  function svgClose() { return '</svg>'; }
+
+  // angle arc between two rays from a vertex; angles in degrees measured
+  // from +x axis, counter-clockwise in math terms but we draw in screen space.
+  function arcPath(cx, cy, r, startDeg, endDeg) {
+    // Draw arc from startDeg to endDeg going the "short" way.
+    let a0 = startDeg, a1 = endDeg;
+    let sweep = a1 - a0;
+    while (sweep <= -180) sweep += 360;
+    while (sweep > 180) sweep -= 360;
+    const large = Math.abs(sweep) > 180 ? 1 : 0;
+    const dir = sweep >= 0 ? 1 : 0; // sweep-flag
+    const x0 = cx + r * Math.cos(toRad(a0));
+    const y0 = cy + r * Math.sin(toRad(a0));
+    const x1 = cx + r * Math.cos(toRad(a0 + sweep));
+    const y1 = cy + r * Math.sin(toRad(a0 + sweep));
+    return { d: `M ${fmt(x0)} ${fmt(y0)} A ${r} ${r} 0 ${large} ${dir} ${fmt(x1)} ${fmt(y1)}`, midDeg: a0 + sweep / 2, sweep: Math.abs(sweep) };
+  }
+
+  // labelled angle marker: small arc + text positioned along bisector
+  function angleMarker(cx, cy, r, startDeg, endDeg, label, opts) {
+    opts = opts || {};
+    const a = arcPath(cx, cy, r, startDeg, endDeg);
+    const labelR = (opts.labelR || r + 20);
+    const lx = cx + labelR * Math.cos(toRad(a.midDeg));
+    const ly = cy + labelR * Math.sin(toRad(a.midDeg));
+    const cls = opts.unknown ? 'fig-angle-unknown' : 'fig-angle-label';
+    let fill = '';
+    if (opts.fill) {
+      const fa = arcPath(cx, cy, r, startDeg, endDeg);
+      fill = `<path class="fig-arc-fill" d="M ${fmt(cx)} ${fmt(cy)} L ${fmt(cx + r*Math.cos(toRad(startDeg)))} ${fmt(cy + r*Math.sin(toRad(startDeg)))} ${fa.d.replace(/^M[^A]*/,'A')} Z"/>`;
+    }
+    return `${fill}<path class="fig-arc" d="${a.d}"/>` +
+      `<text class="${cls}" x="${fmt(lx)}" y="${fmt(ly)}" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  }
+
+  // right-angle square marker at vertex pointing along two directions
+  function rightAngleMark(cx, cy, dir1Deg, dir2Deg, size) {
+    size = size || 16;
+    const p1x = cx + size * Math.cos(toRad(dir1Deg));
+    const p1y = cy + size * Math.sin(toRad(dir1Deg));
+    const p2x = cx + size * Math.cos(toRad(dir2Deg));
+    const p2y = cy + size * Math.sin(toRad(dir2Deg));
+    const cpx = p1x + (p2x - cx);
+    const cpy = p1y + (p2y - cy);
+    return `<path class="fig-rightangle" d="M ${fmt(p1x)} ${fmt(p1y)} L ${fmt(cpx)} ${fmt(cpy)} L ${fmt(p2x)} ${fmt(p2y)}"/>`;
+  }
+
+  function pointDot(x, y) { return `<circle class="fig-vertex" cx="${fmt(x)}" cy="${fmt(y)}" r="4"/>`; }
+  function pointLabel(x, y, txt) { return `<text class="fig-point-label" x="${fmt(x)}" y="${fmt(y)}">${txt}</text>`; }
+
+  // tick marks across a segment midpoint to show equal sides (count = 1,2,3)
+  function equalTicks(x1, y1, x2, y2, count) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    const perp = ang + Math.PI / 2;
+    const tlen = 6;
+    const gap = 5;
+    let out = '';
+    const start = -(count - 1) / 2;
+    for (let i = 0; i < count; i++) {
+      const offset = (start + i) * gap;
+      const ox = mx + offset * Math.cos(ang);
+      const oy = my + offset * Math.sin(ang);
+      out += `<line class="fig-tick" x1="${fmt(ox - tlen*Math.cos(perp))}" y1="${fmt(oy - tlen*Math.sin(perp))}" x2="${fmt(ox + tlen*Math.cos(perp))}" y2="${fmt(oy + tlen*Math.sin(perp))}"/>`;
+    }
+    return out;
+  }
+
+  // parallel arrow marks on a segment (count = 1 or 2 chevrons)
+  function parallelMarks(x1, y1, x2, y2, count) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    const size = 6;
+    let out = '';
+    const start = -(count - 1) / 2;
+    for (let i = 0; i < count; i++) {
+      const off = (start + i) * 7;
+      const bx = mx + off * Math.cos(ang);
+      const by = my + off * Math.sin(ang);
+      const a1 = ang + toRad(150), a2 = ang - toRad(150);
+      out += `<path class="fig-parallel" d="M ${fmt(bx + size*Math.cos(a1))} ${fmt(by + size*Math.sin(a1))} L ${fmt(bx)} ${fmt(by)} L ${fmt(bx + size*Math.cos(a2))} ${fmt(by + size*Math.sin(a2))}"/>`;
+    }
+    return out;
+  }
+
+  // expose helpers to following script chunk via closure object
+  window.__QUIZHELP = {
+    randInt, pick, shuffle, toRad, fmt, numericOptions,
+    svgOpen, svgClose, arcPath, angleMarker, rightAngleMark,
+    pointDot, pointLabel, equalTicks, parallelMarks
+  };
+})();
+
+
+// ============================================================
+// QUIZ TOPICS & QUESTION GENERATORS
+// ============================================================
+(function () {
+  'use strict';
+  const H = window.__QUIZHELP;
+  const { randInt, pick, shuffle, fmt, numericOptions,
+          svgOpen, svgClose, angleMarker, rightAngleMark,
+          pointDot, pointLabel, equalTicks, parallelMarks } = H;
+
+  // Each generator returns:
+  // { stem, figure(svg string), options:[{label,value}], answer(value or index),
+  //   answerType:'value'|'index', explain(html), twoCol?, textOptions? }
+
+  // ----------------------------------------------------------------
+  // ICON set (used by topic cards + runner badge)
+  // ----------------------------------------------------------------
+  const ICONS = {
+    rectangle: '<rect x="3" y="6" width="18" height="12" rx="1"></rect>',
+    square: '<rect x="5" y="5" width="14" height="14" rx="1"></rect>',
+    trapezium: '<polygon points="7,7 17,7 21,17 3,17"></polygon>',
+    lineAngle: '<line x1="3" y1="19" x2="21" y2="19"></line><line x1="9" y1="19" x2="16" y2="7"></line>',
+    intersect: '<line x1="4" y1="6" x2="20" y2="18"></line><line x1="4" y1="18" x2="20" y2="6"></line>',
+    point: '<circle cx="12" cy="12" r="1.5"></circle><line x1="12" y1="12" x2="12" y2="3"></line><line x1="12" y1="12" x2="20" y2="16"></line><line x1="12" y1="12" x2="4" y2="16"></line>',
+    parallelogram: '<polygon points="7,7 21,7 17,17 3,17"></polygon>',
+    rhombus: '<polygon points="12,4 20,12 12,20 4,12"></polygon>',
+    triangle: '<polygon points="12,5 20,19 4,19"></polygon>',
+    rightTri: '<polygon points="5,5 5,19 19,19"></polygon><path d="M5 16 L8 16 L8 19" fill="none"></path>',
+    isoTri: '<polygon points="12,4 19,19 5,19"></polygon>',
+    equiTri: '<polygon points="12,4 20,18 4,18"></polygon>'
+  };
+
+  // ================================================================
+  // 1. RECTANGLE
+  // ================================================================
+  function genRectangle() {
+    const variant = pick(['interior', 'diagonal', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'All four angles are 90°', value: 1, correct: true },
+        { label: 'All four sides are equal', value: 2 },
+        { label: 'Diagonals meet at 90°', value: 3 },
+        { label: 'Only one pair of parallel sides', value: 4 }
+      ]);
+      return {
+        stem: 'Which statement is <strong>always true</strong> for a rectangle?',
+        figure: rectFigure(90, 90, 90, 90, false),
+        options: opts, answerType: 'flag', twoCol: false,
+        explain: `A rectangle is defined by its angles: <strong>all four interior angles are 90°</strong>. Its opposite sides are equal (not all four), its diagonals are equal but do <em>not</em> meet at right angles, and it has <strong>two</strong> pairs of parallel sides.`
+      };
+    }
+    if (variant === 'diagonal') {
+      // diagonal splits rectangle; angle between diagonal and side given, find other.
+      const a = randInt(28, 62);
+      const other = 90 - a;
+      return {
+        stem: `In rectangle <em>ABCD</em>, a diagonal makes an angle of <strong>${a}°</strong> with one side. The corner is a right angle. Find angle <span style="color:#C62828">x</span>, the angle the diagonal makes with the other side at that corner.`,
+        figure: rectDiagonalFigure(a, 'x'),
+        options: numericOptions(other),
+        answer: other, answerType: 'value',
+        explain: `The diagonal splits the 90° corner into two parts. So <span class="calc">x = 90° − ${a}° = ${other}°</span>. The two angles a diagonal makes with the sides at a corner are complementary because the corner of a rectangle is a right angle.`
+      };
+    }
+    // interior: 3 known-ish, confirm the 4th is 90
+    return {
+      stem: 'Each corner of this rectangle is marked. What is the value of angle <span style="color:#C62828">x</span>?',
+      figure: rectFigure(90, 90, 90, 'x', true),
+      options: numericOptions(90),
+      answer: 90, answerType: 'value',
+      explain: `Every interior angle of a rectangle is a right angle, so <span class="calc">x = 90°</span>. The four angles add to 360°, and since they are all equal, each is 360° ÷ 4 = 90°.`
+    };
+  }
+
+  function rectFigure(a, b, c, d, showAngles) {
+    const W = 360, Hh = 240;
+    const x0 = 70, y0 = 55, w = 220, h = 130;
+    let s = svgOpen(W, Hh);
+    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${w}" height="${h}"/>`;
+    // corners: TL, TR, BR, BL
+    const corners = [
+      { x: x0, y: y0, d1: 0, d2: 90, lbl: a, lx: x0 + 26, ly: y0 + 22 },
+      { x: x0 + w, y: y0, d1: 180, d2: 90, lbl: b, lx: x0 + w - 26, ly: y0 + 22 },
+      { x: x0 + w, y: y0 + h, d1: 180, d2: 270, lbl: c, lx: x0 + w - 26, ly: y0 + h - 22 },
+      { x: x0, y: y0 + h, d1: 0, d2: 270, lbl: d, lx: x0 + 26, ly: y0 + h - 22 }
+    ];
+    corners.forEach(cn => {
+      s += rightAngleMark(cn.x, cn.y, cn.d1, cn.d2, 16);
+      if (showAngles) {
+        const cls = (cn.lbl === 'x') ? 'fig-angle-unknown' : 'fig-angle-label';
+        s += `<text class="${cls}" x="${fmt(cn.lx)}" y="${fmt(cn.ly)}" text-anchor="middle" dominant-baseline="central">${cn.lbl}${cn.lbl==='x'?'':'°'}</text>`;
+      }
+    });
+    s += pointLabel(x0 - 14, y0 - 6, 'A') + pointLabel(x0 + w + 6, y0 - 6, 'B');
+    s += pointLabel(x0 + w + 6, y0 + h + 16, 'C') + pointLabel(x0 - 14, y0 + h + 16, 'D');
+    s += svgClose();
+    return s;
+  }
+
+  function rectDiagonalFigure(a, unknownLabel) {
+    const W = 360, Hh = 240;
+    const x0 = 70, y0 = 55, w = 220, h = 130;
+    let s = svgOpen(W, Hh);
+    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${w}" height="${h}"/>`;
+    // diagonal from A (TL) to C (BR)
+    s += `<line class="fig-line-secondary" x1="${x0}" y1="${y0}" x2="${x0+w}" y2="${y0+h}"/>`;
+    s += rightAngleMark(x0, y0, 0, 90, 14);
+    // angle a between top side (dir 0) and diagonal at A
+    const diagAng = Math.atan2(h, w) * 180 / Math.PI;
+    s += angleMarker(x0, y0, 30, 0, diagAng, a + '°', { labelR: 46 });
+    // unknown x between diagonal and left side (dir 90) at A
+    s += angleMarker(x0, y0, 44, diagAng, 90, unknownLabel, { unknown: true, labelR: 62 });
+    s += pointLabel(x0 - 14, y0 - 6, 'A') + pointLabel(x0 + w + 6, y0 - 6, 'B');
+    s += pointLabel(x0 + w + 6, y0 + h + 16, 'C') + pointLabel(x0 - 14, y0 + h + 16, 'D');
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 2. SQUARE
+  // ================================================================
+  function genSquare() {
+    const variant = pick(['diagonal', 'interior', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'Four equal sides and four 90° angles', value: 1, correct: true },
+        { label: 'Four equal sides but angles can differ', value: 2 },
+        { label: 'Opposite sides equal, angles 90°, sides not all equal', value: 3 },
+        { label: 'Diagonals are unequal', value: 4 }
+      ]);
+      return {
+        stem: 'Which description fits a <strong>square</strong>?',
+        figure: squareFigure(true, false),
+        options: opts, answerType: 'flag',
+        explain: `A square has <strong>four equal sides</strong> AND <strong>four right angles</strong> — it is both a rhombus and a rectangle. Its diagonals are equal, bisect each other at 90°, and bisect the corner angles into 45° each.`
+      };
+    }
+    if (variant === 'diagonal') {
+      return {
+        stem: 'A diagonal of this square is drawn. What is angle <span style="color:#C62828">x</span> between the diagonal and a side?',
+        figure: squareDiagonalFigure('x'),
+        options: numericOptions(45),
+        answer: 45, answerType: 'value',
+        explain: `A diagonal of a square <strong>bisects</strong> the 90° corner, so <span class="calc">x = 90° ÷ 2 = 45°</span>. This happens because the two sides at the corner are equal, making the triangle isosceles and right-angled.`
+      };
+    }
+    return {
+      stem: 'What is the size of each interior angle of a square, shown as <span style="color:#C62828">x</span>?',
+      figure: squareFigure(true, true),
+      options: numericOptions(90),
+      answer: 90, answerType: 'value',
+      explain: `Every angle in a square is a right angle: <span class="calc">x = 90°</span>. The four angles sum to 360° and are all equal.`
+    };
+  }
+
+  function squareFigure(showRight, labelOne) {
+    const W = 320, Hh = 240, x0 = 90, y0 = 45, side = 150;
+    let s = svgOpen(W, Hh);
+    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${side}" height="${side}"/>`;
+    // equal side ticks (single tick each)
+    s += equalTicks(x0, y0, x0+side, y0, 1);
+    s += equalTicks(x0+side, y0, x0+side, y0+side, 1);
+    s += equalTicks(x0+side, y0+side, x0, y0+side, 1);
+    s += equalTicks(x0, y0+side, x0, y0, 1);
+    const corners = [
+      { x: x0, y: y0, d1: 0, d2: 90 },
+      { x: x0+side, y: y0, d1: 180, d2: 90 },
+      { x: x0+side, y: y0+side, d1: 180, d2: 270 },
+      { x: x0, y: y0+side, d1: 0, d2: 270 }
+    ];
+    if (showRight) corners.forEach(c => { s += rightAngleMark(c.x, c.y, c.d1, c.d2, 15); });
+    if (labelOne) {
+      s += `<text class="fig-angle-unknown" x="${x0+26}" y="${y0+22}" text-anchor="middle" dominant-baseline="central">x</text>`;
+    }
+    s += svgClose();
+    return s;
+  }
+
+  function squareDiagonalFigure(unknown) {
+    const W = 320, Hh = 240, x0 = 90, y0 = 45, side = 150;
+    let s = svgOpen(W, Hh);
+    s += `<rect class="fig-shape" x="${x0}" y="${y0}" width="${side}" height="${side}"/>`;
+    s += equalTicks(x0, y0, x0+side, y0, 1);
+    s += equalTicks(x0, y0+side, x0, y0, 1);
+    s += `<line class="fig-line-secondary" x1="${x0}" y1="${y0+side}" x2="${x0+side}" y2="${y0}"/>`;
+    s += rightAngleMark(x0, y0+side, 0, -90, 14);
+    s += angleMarker(x0, y0+side, 32, -90, -45, unknown, { unknown: true, labelR: 50 });
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 3. TRAPEZIUM (co-interior angles between parallel sides)
+  // ================================================================
+  function genTrapezium() {
+    const variant = pick(['cointerior', 'isoBase', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'Exactly one pair of parallel sides', value: 1, correct: true },
+        { label: 'Two pairs of parallel sides', value: 2 },
+        { label: 'All sides equal', value: 3 },
+        { label: 'All angles equal', value: 4 }
+      ]);
+      return {
+        stem: 'What makes a shape a <strong>trapezium</strong>?',
+        figure: trapeziumFigure(70, 110, true),
+        options: opts, answerType: 'flag',
+        explain: `A trapezium has <strong>exactly one pair of parallel sides</strong> (the top and bottom here, marked with arrows). The two angles on each leg are co-interior, so they add up to 180°.`
+      };
+    }
+    if (variant === 'isoBase') {
+      const base = randInt(58, 78);
+      return {
+        stem: `This is an <strong>isosceles trapezium</strong> (the two legs are equal). One base angle is <strong>${base}°</strong>. Find the other base angle <span style="color:#C62828">x</span> on the same parallel side.`,
+        figure: isoTrapeziumFigure(base, 'x'),
+        options: numericOptions(base),
+        answer: base, answerType: 'value',
+        explain: `In an isosceles trapezium the two base angles on the same parallel side are <strong>equal</strong>. So <span class="calc">x = ${base}°</span>. (The legs being equal forces a line of symmetry down the middle.)`
+      };
+    }
+    // co-interior
+    const top = randInt(105, 130);
+    const bottom = 180 - top;
+    return {
+      stem: `The top and bottom of this trapezium are parallel. The angle at the top-left is <strong>${top}°</strong>. Find angle <span style="color:#C62828">x</span> at the bottom-left.`,
+      figure: trapeziumCointFigure(top, 'x'),
+      options: numericOptions(bottom),
+      answer: bottom, answerType: 'value',
+      explain: `The left leg is a transversal cutting the two parallel sides. The top-left and bottom-left angles are <strong>co-interior (allied) angles</strong>, so they add to 180°. <span class="calc">x = 180° − ${top}° = ${bottom}°</span>.`
+    };
+  }
+
+  function trapeziumPts(x0, y0, topW, botW, h) {
+    const topL = { x: x0 + (botW - topW) / 2, y: y0 };
+    const topR = { x: topL.x + topW, y: y0 };
+    const botL = { x: x0, y: y0 + h };
+    const botR = { x: x0 + botW, y: y0 + h };
+    return { topL, topR, botL, botR };
+  }
+
+  function trapeziumFigure(topW, botW, showParallel) {
+    const W = 380, Hh = 230, x0 = 60, y0 = 55, h = 120;
+    const p = trapeziumPts(x0, y0, topW, botW, h);
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${p.topL.x},${p.topL.y} ${p.topR.x},${p.topR.y} ${p.botR.x},${p.botR.y} ${p.botL.x},${p.botL.y}"/>`;
+    if (showParallel) {
+      s += parallelMarks(p.topL.x, p.topL.y, p.topR.x, p.topR.y, 1);
+      s += parallelMarks(p.botL.x, p.botL.y, p.botR.x, p.botR.y, 1);
+    }
+    s += svgClose();
+    return s;
+  }
+
+  function isoTrapeziumFigure(base, unknown) {
+    const W = 380, Hh = 230, x0 = 70, y0 = 50, topW = 120, botW = 240, h = 120;
+    const p = trapeziumPts(x0, y0, topW, botW, h);
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${p.topL.x},${p.topL.y} ${p.topR.x},${p.topR.y} ${p.botR.x},${p.botR.y} ${p.botL.x},${p.botL.y}"/>`;
+    s += equalTicks(p.topL.x, p.topL.y, p.botL.x, p.botL.y, 1);
+    s += equalTicks(p.topR.x, p.topR.y, p.botR.x, p.botR.y, 1);
+    s += parallelMarks(p.topL.x, p.topL.y, p.topR.x, p.topR.y, 1);
+    s += parallelMarks(p.botL.x, p.botL.y, p.botR.x, p.botR.y, 1);
+    // bottom-left angle (known) — between bottom side (dir 0) and left leg (up-left)
+    const legAngL = Math.atan2(p.topL.y - p.botL.y, p.topL.x - p.botL.x) * 180 / Math.PI;
+    s += angleMarker(p.botL.x, p.botL.y, 30, 0, legAngL, base + '°', { labelR: 50 });
+    const legAngR = Math.atan2(p.topR.y - p.botR.y, p.topR.x - p.botR.x) * 180 / Math.PI;
+    s += angleMarker(p.botR.x, p.botR.y, 30, 180, legAngR, unknown, { unknown: true, labelR: 50 });
+    s += svgClose();
+    return s;
+  }
+
+  function trapeziumCointFigure(top, unknown) {
+    const W = 380, Hh = 240, x0 = 70, y0 = 50, topW = 150, botW = 230, h = 130;
+    const p = trapeziumPts(x0, y0, topW, botW, h);
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${p.topL.x},${p.topL.y} ${p.topR.x},${p.topR.y} ${p.botR.x},${p.botR.y} ${p.botL.x},${p.botL.y}"/>`;
+    s += parallelMarks(p.topL.x, p.topL.y, p.topR.x, p.topR.y, 1);
+    s += parallelMarks(p.botL.x, p.botL.y, p.botR.x, p.botR.y, 1);
+    // top-left angle: between top side (dir 0) and left leg going down
+    const downLeg = Math.atan2(p.botL.y - p.topL.y, p.botL.x - p.topL.x) * 180 / Math.PI;
+    s += angleMarker(p.topL.x, p.topL.y, 30, 0, downLeg, top + '°', { labelR: 50 });
+    // bottom-left: between bottom side (dir 0) and left leg going up
+    const upLeg = Math.atan2(p.topL.y - p.botL.y, p.topL.x - p.botL.x) * 180 / Math.PI;
+    s += angleMarker(p.botL.x, p.botL.y, 30, 0, upLeg, unknown, { unknown: true, labelR: 50 });
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 4. ANGLES ON A STRAIGHT LINE  (sum 180)
+  // ================================================================
+  function genStraightLine() {
+    const variant = pick(['two', 'three']);
+    if (variant === 'three') {
+      const a = randInt(35, 70);
+      const b = randInt(40, 75);
+      const x = 180 - a - b;
+      return {
+        stem: `Angles <strong>${a}°</strong>, <strong>${b}°</strong> and <span style="color:#C62828">x</span> sit on a straight line at a point. Find <span style="color:#C62828">x</span>.`,
+        figure: straightLineFigure([a, b, 'x']),
+        options: numericOptions(x),
+        answer: x, answerType: 'value',
+        explain: `Angles on a straight line add up to <strong>180°</strong>. <span class="calc">x = 180° − ${a}° − ${b}° = ${x}°</span>.`
+      };
+    }
+    const a = randInt(40, 140);
+    const x = 180 - a;
+    return {
+      stem: `The two angles below sit on a straight line. One is <strong>${a}°</strong>. Find <span style="color:#C62828">x</span>.`,
+      figure: straightLineFigure([a, 'x']),
+      options: numericOptions(x),
+      answer: x, answerType: 'value',
+      explain: `Angles on a straight line add up to <strong>180°</strong> (a half turn). <span class="calc">x = 180° − ${a}° = ${x}°</span>.`
+    };
+  }
+
+  function straightLineFigure(parts) {
+    // parts: array of angle values that sum to 180, drawn around a point on a horizontal line
+    const W = 400, Hh = 220, cx = 200, cy = 150, len = 150;
+    let s = svgOpen(W, Hh);
+    // base line
+    s += `<line class="fig-line" x1="${cx-len}" y1="${cy}" x2="${cx+len}" y2="${cy}"/>`;
+    // rays start from 180deg (left) going to 0 (right) in screen coords;
+    // we measure angles above the line so use negative (upward) directions.
+    let acc = 180; // start pointing left
+    const numericParts = parts.map(p => p === 'x' ? null : p);
+    // we need actual value for x to place ray
+    let known = numericParts.filter(v => v != null).reduce((a, b) => a + b, 0);
+    const xval = 180 - known;
+    const resolved = parts.map(p => p === 'x' ? xval : p);
+    // draw interior rays (between first and last)
+    let cursor = 180;
+    for (let i = 0; i < resolved.length; i++) {
+      const seg = resolved[i];
+      const start = cursor;
+      const end = cursor - seg; // moving clockwise upward over the top
+      // ray at 'end' boundary (skip final boundary = 0 which is the base line)
+      if (i < resolved.length - 1) {
+        const rad = (-(end)) * Math.PI / 180; // screen: up is negative y
+        const ex = cx + len * Math.cos(end * Math.PI / 180);
+        const ey = cy - len * Math.sin(end * Math.PI / 180);
+        s += `<line class="fig-line-secondary" x1="${cx}" y1="${cy}" x2="${fmt(ex)}" y2="${fmt(ey)}"/>`;
+      }
+      // arc + label in middle of segment
+      const mid = (start + end) / 2;
+      const isX = parts[i] === 'x';
+      const lr = 40 + (i % 2) * 10;
+      const lx = cx + lr * Math.cos(mid * Math.PI / 180);
+      const ly = cy - lr * Math.sin(mid * Math.PI / 180);
+      // small arc
+      const r = 28;
+      const ax0 = cx + r * Math.cos(start * Math.PI / 180);
+      const ay0 = cy - r * Math.sin(start * Math.PI / 180);
+      const ax1 = cx + r * Math.cos(end * Math.PI / 180);
+      const ay1 = cy - r * Math.sin(end * Math.PI / 180);
+      s += `<path class="fig-arc" d="M ${fmt(ax0)} ${fmt(ay0)} A ${r} ${r} 0 0 1 ${fmt(ax1)} ${fmt(ay1)}"/>`;
+      const cls = isX ? 'fig-angle-unknown' : 'fig-angle-label';
+      s += `<text class="${cls}" x="${fmt(lx)}" y="${fmt(ly)}" text-anchor="middle" dominant-baseline="central">${isX ? 'x' : seg + '°'}</text>`;
+      cursor = end;
+    }
+    s += pointDot(cx, cy);
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 5. ANGLES AT INTERSECTING STRAIGHT LINES (vertically opposite)
+  // ================================================================
+  function genIntersecting() {
+    const variant = pick(['vertical', 'adjacent']);
+    const a = randInt(35, 145);
+    if (variant === 'vertical') {
+      return {
+        stem: `Two straight lines cross. One angle is <strong>${a}°</strong>. Find the <strong>vertically opposite</strong> angle <span style="color:#C62828">x</span>.`,
+        figure: intersectFigure(a, 'x', 'vertical'),
+        options: numericOptions(a),
+        answer: a, answerType: 'value',
+        explain: `When two straight lines cross, <strong>vertically opposite angles are equal</strong>. So <span class="calc">x = ${a}°</span>.`
+      };
+    }
+    const x = 180 - a;
+    return {
+      stem: `Two straight lines cross. One angle is <strong>${a}°</strong>. Find the <strong>adjacent</strong> angle <span style="color:#C62828">x</span> next to it.`,
+      figure: intersectFigure(a, 'x', 'adjacent'),
+      options: numericOptions(x),
+      answer: x, answerType: 'value',
+      explain: `Angles on a straight line add to 180°, so the angle next to the ${a}° angle is its supplement. <span class="calc">x = 180° − ${a}° = ${x}°</span>.`
+    };
+  }
+
+  function intersectFigure(known, unknown, mode) {
+    const W = 380, Hh = 250, cx = 190, cy = 125, len = 130;
+    // line 1 horizontal-ish, line 2 at angle theta
+    const theta = 35; // degrees of the slanted line above horizontal
+    let s = svgOpen(W, Hh);
+    // horizontal line
+    s += `<line class="fig-line" x1="${cx-len}" y1="${cy}" x2="${cx+len}" y2="${cy}"/>`;
+    // slanted line
+    const dx = len * Math.cos(theta * Math.PI / 180);
+    const dy = len * Math.sin(theta * Math.PI / 180);
+    s += `<line class="fig-line" x1="${fmt(cx-dx)}" y1="${fmt(cy+dy)}" x2="${fmt(cx+dx)}" y2="${fmt(cy-dy)}"/>`;
+    // Four sectors: top (between +x going to slant up-right) etc.
+    // Known angle = top sector between horizontal-right (0) and slant up-right (theta).
+    s += angleMarker(cx, cy, 30, 0, -theta, known + '°', { labelR: 48 });
+    if (mode === 'vertical') {
+      // vertically opposite = bottom-left sector: between horizontal-left (180) and slant down-left (180+theta)
+      s += angleMarker(cx, cy, 30, 180, 180 + theta, unknown, { unknown: true, labelR: 48 });
+    } else {
+      // adjacent = top-left sector: between slant up-right (-theta i.e. up) ... use between horizontal-left(180) and slant up-right boundary
+      s += angleMarker(cx, cy, 38, -theta, -180, unknown, { unknown: true, labelR: 56 });
+    }
+    s += pointDot(cx, cy);
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 6. ANGLES AT A POINT (sum 360)
+  // ================================================================
+  function genAroundPoint() {
+    const variant = pick(['three', 'four']);
+    if (variant === 'four') {
+      const a = randInt(60, 110);
+      const b = randInt(60, 100);
+      const c = randInt(50, 90);
+      const x = 360 - a - b - c;
+      return {
+        stem: `Four angles meet at a point: <strong>${a}°</strong>, <strong>${b}°</strong>, <strong>${c}°</strong> and <span style="color:#C62828">x</span>. Find <span style="color:#C62828">x</span>.`,
+        figure: aroundPointFigure([a, b, c, 'x']),
+        options: numericOptions(x),
+        answer: x, answerType: 'value',
+        explain: `Angles around a point add up to <strong>360°</strong> (a full turn). <span class="calc">x = 360° − ${a}° − ${b}° − ${c}° = ${x}°</span>.`
+      };
+    }
+    const a = randInt(90, 150);
+    const b = randInt(90, 140);
+    const x = 360 - a - b;
+    return {
+      stem: `Three angles meet at a point: <strong>${a}°</strong>, <strong>${b}°</strong> and <span style="color:#C62828">x</span>. Find <span style="color:#C62828">x</span>.`,
+      figure: aroundPointFigure([a, b, 'x']),
+      options: numericOptions(x),
+      answer: x, answerType: 'value',
+      explain: `Angles around a point add up to <strong>360°</strong>. <span class="calc">x = 360° − ${a}° − ${b}° = ${x}°</span>.`
+    };
+  }
+
+  function aroundPointFigure(parts) {
+    const W = 380, Hh = 270, cx = 190, cy = 140, len = 120;
+    let s = svgOpen(W, Hh);
+    const known = parts.filter(p => p !== 'x').reduce((a, b) => a + b, 0);
+    const xval = 360 - known;
+    const resolved = parts.map(p => p === 'x' ? xval : p);
+    let cursor = -90; // start pointing up
+    // draw rays at each boundary
+    const boundaries = [cursor];
+    resolved.forEach(seg => { cursor += seg; boundaries.push(cursor); });
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const ang = boundaries[i];
+      const ex = cx + len * Math.cos(ang * Math.PI / 180);
+      const ey = cy + len * Math.sin(ang * Math.PI / 180);
+      s += `<line class="fig-line-secondary" x1="${cx}" y1="${cy}" x2="${fmt(ex)}" y2="${fmt(ey)}"/>`;
+    }
+    // arcs + labels
+    let c2 = -90;
+    for (let i = 0; i < resolved.length; i++) {
+      const start = c2, end = c2 + resolved[i];
+      const r = 30;
+      const ax0 = cx + r * Math.cos(start * Math.PI / 180);
+      const ay0 = cy + r * Math.sin(start * Math.PI / 180);
+      const ax1 = cx + r * Math.cos(end * Math.PI / 180);
+      const ay1 = cy + r * Math.sin(end * Math.PI / 180);
+      const large = (resolved[i] > 180) ? 1 : 0;
+      s += `<path class="fig-arc" d="M ${fmt(ax0)} ${fmt(ay0)} A ${r} ${r} 0 ${large} 1 ${fmt(ax1)} ${fmt(ay1)}"/>`;
+      const mid = (start + end) / 2;
+      const lr = 52;
+      const lx = cx + lr * Math.cos(mid * Math.PI / 180);
+      const ly = cy + lr * Math.sin(mid * Math.PI / 180);
+      const isX = parts[i] === 'x';
+      const cls = isX ? 'fig-angle-unknown' : 'fig-angle-label';
+      s += `<text class="${cls}" x="${fmt(lx)}" y="${fmt(ly)}" text-anchor="middle" dominant-baseline="central">${isX ? 'x' : resolved[i] + '°'}</text>`;
+      c2 = end;
+    }
+    s += pointDot(cx, cy);
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 7. PARALLELOGRAM
+  // ================================================================
+  function genParallelogram() {
+    const variant = pick(['opposite', 'consecutive', 'property']);
+    const a = randInt(55, 125);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'Opposite angles are equal', value: 1, correct: true },
+        { label: 'All angles are 90°', value: 2 },
+        { label: 'Diagonals are always equal', value: 3 },
+        { label: 'All four sides are equal', value: 4 }
+      ]);
+      return {
+        stem: 'Which property is <strong>always true</strong> for a parallelogram?',
+        figure: parallelogramFigure(75, 'eq'),
+        options: opts, answerType: 'flag',
+        explain: `In a parallelogram <strong>opposite angles are equal</strong> and opposite sides are parallel and equal. Its angles are not all 90° in general, its diagonals bisect each other but are not equal, and its four sides are not all equal.`
+      };
+    }
+    if (variant === 'consecutive') {
+      const x = 180 - a;
+      return {
+        stem: `In this parallelogram one angle is <strong>${a}°</strong>. Find the <strong>consecutive</strong> angle <span style="color:#C62828">x</span> (next to it).`,
+        figure: parallelogramFigure(a, 'consec'),
+        options: numericOptions(x),
+        answer: x, answerType: 'value',
+        explain: `Consecutive angles of a parallelogram are <strong>supplementary</strong> (they lie between parallel sides), so they add to 180°. <span class="calc">x = 180° − ${a}° = ${x}°</span>.`
+      };
+    }
+    return {
+      stem: `In this parallelogram one angle is <strong>${a}°</strong>. Find the <strong>opposite</strong> angle <span style="color:#C62828">x</span>.`,
+      figure: parallelogramFigure(a, 'opp'),
+      options: numericOptions(a),
+      answer: a, answerType: 'value',
+      explain: `Opposite angles of a parallelogram are <strong>equal</strong>. So <span class="calc">x = ${a}°</span>.`
+    };
+  }
+
+  function parallelogramFigure(known, mode) {
+    const W = 380, Hh = 230, x0 = 70, y0 = 50, w = 200, h = 120, slant = 50;
+    // vertices: A bottom-left, B bottom-right, C top-right, D top-left (slanted)
+    const A = { x: x0, y: y0 + h };
+    const B = { x: x0 + w, y: y0 + h };
+    const C = { x: x0 + w + slant, y: y0 };
+    const D = { x: x0 + slant, y: y0 };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}"/>`;
+    s += parallelMarks(A.x, A.y, B.x, B.y, 1);
+    s += parallelMarks(D.x, D.y, C.x, C.y, 1);
+    s += parallelMarks(A.x, A.y, D.x, D.y, 2);
+    s += parallelMarks(B.x, B.y, C.x, C.y, 2);
+    // angle at A (bottom-left): between AB (dir 0) and AD (up-right)
+    const angAD = Math.atan2(D.y - A.y, D.x - A.x) * 180 / Math.PI;
+    function labelAt(V, d1, d2, txt, unknown) {
+      return angleMarker(V.x, V.y, 26, d1, d2, txt, { unknown: unknown, labelR: 44 });
+    }
+    if (mode === 'eq') {
+      // just show two equal opposite angles marked
+      s += labelAt(A, 0, angAD, '', false);
+    }
+    // A known
+    s += labelAt(A, 0, angAD, known + '°', false);
+    if (mode === 'opp') {
+      // opposite = C: between CB (down) and CD (left)
+      const angCB = Math.atan2(B.y - C.y, B.x - C.x) * 180 / Math.PI;
+      const angCD = Math.atan2(D.y - C.y, D.x - C.x) * 180 / Math.PI;
+      s += angleMarker(C.x, C.y, 26, angCD, angCB, 'x', { unknown: true, labelR: 44 });
+    } else if (mode === 'consec') {
+      // consecutive = B: between BA (left, dir180) and BC (up)
+      const angBC = Math.atan2(C.y - B.y, C.x - B.x) * 180 / Math.PI;
+      s += angleMarker(B.x, B.y, 26, 180, angBC, 'x', { unknown: true, labelR: 44 });
+    }
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 8. RHOMBUS
+  // ================================================================
+  function genRhombus() {
+    const variant = pick(['opposite', 'consecutive', 'diagonal', 'property']);
+    const a = randInt(50, 130);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'Four equal sides; diagonals cross at 90°', value: 1, correct: true },
+        { label: 'All angles are 90°', value: 2 },
+        { label: 'Only one pair of parallel sides', value: 3 },
+        { label: 'Diagonals are equal in length', value: 4 }
+      ]);
+      return {
+        stem: 'Which property is true for a <strong>rhombus</strong>?',
+        figure: rhombusFigure(70, 'eq'),
+        options: opts, answerType: 'flag',
+        explain: `A rhombus has <strong>four equal sides</strong>, and its <strong>diagonals are perpendicular</strong> (cross at 90°) and bisect the angles. Its angles are not all 90° (that would be a square), it has two pairs of parallel sides, and its diagonals are generally unequal.`
+      };
+    }
+    if (variant === 'diagonal') {
+      return {
+        stem: 'The diagonals of this rhombus are drawn. What is angle <span style="color:#C62828">x</span> where they cross?',
+        figure: rhombusDiagonalFigure('x'),
+        options: numericOptions(90),
+        answer: 90, answerType: 'value',
+        explain: `The diagonals of a rhombus are <strong>perpendicular</strong> — they always cross at <span class="calc">x = 90°</span>.`
+      };
+    }
+    if (variant === 'consecutive') {
+      const x = 180 - a;
+      return {
+        stem: `One angle of this rhombus is <strong>${a}°</strong>. Find the <strong>consecutive</strong> angle <span style="color:#C62828">x</span>.`,
+        figure: rhombusFigure(a, 'consec'),
+        options: numericOptions(x),
+        answer: x, answerType: 'value',
+        explain: `A rhombus is a parallelogram, so consecutive angles are <strong>supplementary</strong>. <span class="calc">x = 180° − ${a}° = ${x}°</span>.`
+      };
+    }
+    return {
+      stem: `One angle of this rhombus is <strong>${a}°</strong>. Find the <strong>opposite</strong> angle <span style="color:#C62828">x</span>.`,
+      figure: rhombusFigure(a, 'opp'),
+      options: numericOptions(a),
+      answer: a, answerType: 'value',
+      explain: `Opposite angles of a rhombus are <strong>equal</strong> (it is a parallelogram). <span class="calc">x = ${a}°</span>.`
+    };
+  }
+
+  function rhombusVerts(cx, cy, hw, hh) {
+    return {
+      top: { x: cx, y: cy - hh },
+      right: { x: cx + hw, y: cy },
+      bottom: { x: cx, y: cy + hh },
+      left: { x: cx - hw, y: cy }
+    };
+  }
+
+  function rhombusFigure(known, mode) {
+    const W = 360, Hh = 250, cx = 180, cy = 125, hw = 110, hh = 85;
+    const v = rhombusVerts(cx, cy, hw, hh);
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${v.top.x},${v.top.y} ${v.right.x},${v.right.y} ${v.bottom.x},${v.bottom.y} ${v.left.x},${v.left.y}"/>`;
+    // all four sides single tick (equal)
+    s += equalTicks(v.top.x, v.top.y, v.right.x, v.right.y, 1);
+    s += equalTicks(v.right.x, v.right.y, v.bottom.x, v.bottom.y, 1);
+    s += equalTicks(v.bottom.x, v.bottom.y, v.left.x, v.left.y, 1);
+    s += equalTicks(v.left.x, v.left.y, v.top.x, v.top.y, 1);
+    function dirTo(from, to) { return Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI; }
+    // known at LEFT vertex
+    s += angleMarker(v.left.x, v.left.y, 26, dirTo(v.left, v.top), dirTo(v.left, v.bottom), known + '°', { labelR: 42 });
+    if (mode === 'opp') {
+      s += angleMarker(v.right.x, v.right.y, 26, dirTo(v.right, v.bottom), dirTo(v.right, v.top), 'x', { unknown: true, labelR: 42 });
+    } else if (mode === 'consec') {
+      s += angleMarker(v.top.x, v.top.y, 26, dirTo(v.top, v.right), dirTo(v.top, v.left), 'x', { unknown: true, labelR: 42 });
+    }
+    s += svgClose();
+    return s;
+  }
+
+  function rhombusDiagonalFigure(unknown) {
+    const W = 360, Hh = 250, cx = 180, cy = 125, hw = 110, hh = 85;
+    const v = rhombusVerts(cx, cy, hw, hh);
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${v.top.x},${v.top.y} ${v.right.x},${v.right.y} ${v.bottom.x},${v.bottom.y} ${v.left.x},${v.left.y}"/>`;
+    s += `<line class="fig-line-secondary" x1="${v.top.x}" y1="${v.top.y}" x2="${v.bottom.x}" y2="${v.bottom.y}"/>`;
+    s += `<line class="fig-line-secondary" x1="${v.left.x}" y1="${v.left.y}" x2="${v.right.x}" y2="${v.right.y}"/>`;
+    s += rightAngleMark(cx, cy, -90, 0, 14);
+    s += `<text class="fig-angle-unknown" x="${cx+24}" y="${cy-18}" text-anchor="middle" dominant-baseline="central">x</text>`;
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 9. TRIANGLE (angle sum 180)
+  // ================================================================
+  function genTriangle() {
+    const variant = pick(['sum', 'exterior', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'The three interior angles add up to 180°', value: 1, correct: true },
+        { label: 'The three interior angles add up to 360°', value: 2 },
+        { label: 'Every triangle has a right angle', value: 3 },
+        { label: 'All triangles have three equal sides', value: 4 }
+      ]);
+      return {
+        stem: 'Which statement is true for <strong>every</strong> triangle?',
+        figure: triangleFigure(60, 70, 50, [0,1,2]),
+        options: opts, answerType: 'flag',
+        explain: `The interior angles of any triangle always add up to <strong>180°</strong>. Not every triangle has a right angle, and not all triangles are equilateral.`
+      };
+    }
+    if (variant === 'exterior') {
+      const a = randInt(40, 70), b = randInt(45, 75);
+      const ext = a + b;
+      return {
+        stem: `Two interior angles of a triangle are <strong>${a}°</strong> and <strong>${b}°</strong>. Find the <strong>exterior</strong> angle <span style="color:#C62828">x</span> shown.`,
+        figure: triangleExteriorFigure(a, b),
+        options: numericOptions(ext),
+        answer: ext, answerType: 'value',
+        explain: `An exterior angle of a triangle equals the <strong>sum of the two opposite interior angles</strong>. <span class="calc">x = ${a}° + ${b}° = ${ext}°</span>.`
+      };
+    }
+    // sum
+    const a = randInt(40, 80), b = randInt(40, 80);
+    const x = 180 - a - b;
+    return {
+      stem: `Two angles of this triangle are <strong>${a}°</strong> and <strong>${b}°</strong>. Find the third angle <span style="color:#C62828">x</span>.`,
+      figure: triangleFigure(a, b, 'x', []),
+      options: numericOptions(x),
+      answer: x, answerType: 'value',
+      explain: `The angles in a triangle add up to <strong>180°</strong>. <span class="calc">x = 180° − ${a}° − ${b}° = ${x}°</span>.`
+    };
+  }
+
+  // generic triangle: angles at bottom-left (A), bottom-right (B), apex (C)
+  function triangleFigure(angA, angB, angC, blankMarks) {
+    const W = 360, Hh = 240;
+    const A = { x: 60, y: 190 }, B = { x: 300, y: 190 };
+    // apex placed using angle A to look plausible
+    const apexX = 150, apexY = 50;
+    const C = { x: apexX, y: apexY };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
+    function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    function mark(V, t1, t2, txt) {
+      const isX = (txt === 'x');
+      return angleMarker(V.x, V.y, 28, dirTo(V, t1), dirTo(V, t2), isX ? 'x' : txt + '°', { unknown: isX, labelR: 46 });
+    }
+    s += mark(A, B, C, angA);
+    s += mark(B, C, A, angB);
+    s += mark(C, A, B, angC);
+    s += pointLabel(A.x - 16, A.y + 6, 'A') + pointLabel(B.x + 8, B.y + 6, 'B') + pointLabel(C.x - 6, C.y - 10, 'C');
+    s += svgClose();
+    return s;
+  }
+
+  function triangleExteriorFigure(angA, angB) {
+    const W = 400, Hh = 240;
+    const A = { x: 70, y: 180 }, B = { x: 270, y: 180 }, C = { x: 150, y: 55 };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
+    // extend base beyond B to the right
+    const ext = { x: 360, y: 180 };
+    s += `<line class="fig-line" x1="${B.x}" y1="${B.y}" x2="${ext.x}" y2="${ext.y}"/>`;
+    function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    s += angleMarker(A.x, A.y, 28, dirTo(A, B), dirTo(A, C), angA + '°', { labelR: 46 });
+    s += angleMarker(B.x, B.y, 28, dirTo(B, C), dirTo(B, A), angB + '°', { labelR: 46 });
+    // exterior at B between BC and the extension (dir 0)
+    s += angleMarker(B.x, B.y, 34, 0, dirTo(B, C), 'x', { unknown: true, labelR: 52 });
+    s += pointLabel(A.x - 16, A.y + 6, 'A') + pointLabel(B.x - 4, B.y + 18, 'B') + pointLabel(C.x - 6, C.y - 10, 'C');
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 10. RIGHT-ANGLED TRIANGLE
+  // ================================================================
+  function genRightTriangle() {
+    const variant = pick(['other', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'The two non-right angles add up to 90°', value: 1, correct: true },
+        { label: 'All three angles are equal', value: 2 },
+        { label: 'It always has two equal sides', value: 3 },
+        { label: 'The right angle is 45°', value: 4 }
+      ]);
+      return {
+        stem: 'In a right-angled triangle, which is always true?',
+        figure: rightTriangleFigure(35, 'x', true),
+        options: opts, answerType: 'flag',
+        explain: `One angle is 90°, and since all three add to 180°, the <strong>other two must add to 90°</strong> (they are complementary). A right-angled triangle need not have equal sides, and the right angle is by definition 90°.`
+      };
+    }
+    const a = randInt(25, 65);
+    const x = 90 - a;
+    return {
+      stem: `This right-angled triangle has a 90° angle and one angle of <strong>${a}°</strong>. Find the third angle <span style="color:#C62828">x</span>.`,
+      figure: rightTriangleFigure(a, 'x', false),
+      options: numericOptions(x),
+      answer: x, answerType: 'value',
+      explain: `The angles add to 180°, and one is 90°, so the other two add to 90°. <span class="calc">x = 90° − ${a}° = ${x}°</span>.`
+    };
+  }
+
+  function rightTriangleFigure(angBase, unknownTxt, propMode) {
+    const W = 360, Hh = 240;
+    // right angle at B (bottom-right). A bottom-left, C top-right above B.
+    const A = { x: 60, y: 190 }, B = { x: 290, y: 190 }, C = { x: 290, y: 55 };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
+    s += rightAngleMark(B.x, B.y, 180, -90, 16);
+    function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    // angle at A (base) known
+    s += angleMarker(A.x, A.y, 30, dirTo(A, B), dirTo(A, C), angBase + '°', { labelR: 48 });
+    // unknown at C
+    s += angleMarker(C.x, C.y, 28, dirTo(C, A), dirTo(C, B), propMode ? 'y' : 'x', { unknown: true, labelR: 44 });
+    s += pointLabel(A.x - 16, A.y + 6, 'A') + pointLabel(B.x + 8, B.y + 14, 'B') + pointLabel(C.x + 8, C.y - 6, 'C');
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 11. ISOSCELES TRIANGLE
+  // ================================================================
+  function genIsosceles() {
+    const variant = pick(['baseFromApex', 'apexFromBase', 'baseEqual', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'The two base angles are equal', value: 1, correct: true },
+        { label: 'All three angles are 60°', value: 2 },
+        { label: 'It must contain a right angle', value: 3 },
+        { label: 'All three sides are different', value: 4 }
+      ]);
+      return {
+        stem: 'Which property defines an <strong>isosceles</strong> triangle?',
+        figure: isoTriangleFigure(50, 50, 80, 'show'),
+        options: opts, answerType: 'flag',
+        explain: `An isosceles triangle has two equal sides, and the <strong>two base angles (opposite the equal sides) are equal</strong>. The angles are only all 60° if it is equilateral, and it does not have to contain a right angle.`
+      };
+    }
+    if (variant === 'baseFromApex') {
+      const apex = randInt(30, 100);
+      const base = (180 - apex) / 2;
+      // keep integer
+      const apex2 = (apex % 2 === 0) ? apex : apex + 1;
+      const base2 = (180 - apex2) / 2;
+      return {
+        stem: `This isosceles triangle has an apex angle of <strong>${apex2}°</strong>. The two base angles are equal. Find each base angle <span style="color:#C62828">x</span>.`,
+        figure: isoTriangleFigure('x', 'x', apex2, 'apexKnown'),
+        options: numericOptions(base2),
+        answer: base2, answerType: 'value',
+        explain: `The base angles are equal, and all three add to 180°. So <span class="calc">x = (180° − ${apex2}°) ÷ 2 = ${base2}°</span>.`
+      };
+    }
+    if (variant === 'apexFromBase') {
+      const base = randInt(45, 75);
+      const apex = 180 - 2 * base;
+      return {
+        stem: `In this isosceles triangle each base angle is <strong>${base}°</strong>. Find the apex angle <span style="color:#C62828">x</span>.`,
+        figure: isoTriangleFigure(base, base, 'x', 'baseKnown'),
+        options: numericOptions(apex),
+        answer: apex, answerType: 'value',
+        explain: `Both base angles are ${base}°, and the three angles add to 180°. <span class="calc">x = 180° − ${base}° − ${base}° = ${apex}°</span>.`
+      };
+    }
+    // baseEqual: one base angle given, find the other
+    const base = randInt(45, 75);
+    return {
+      stem: `This triangle is isosceles with the two marked sides equal. One base angle is <strong>${base}°</strong>. Find the other base angle <span style="color:#C62828">x</span>.`,
+      figure: isoTriangleFigure(base, 'x', 180 - 2 * base, 'oneBaseKnown'),
+      options: numericOptions(base),
+      answer: base, answerType: 'value',
+      explain: `The base angles opposite the two equal sides are <strong>equal</strong>, so <span class="calc">x = ${base}°</span>.`
+    };
+  }
+
+  // isosceles: apex at top (C), base A (left) B (right). Equal sides CA and CB.
+  function isoTriangleFigure(angA, angB, angC, mode) {
+    const W = 360, Hh = 240;
+    const A = { x: 80, y: 190 }, B = { x: 280, y: 190 }, C = { x: 180, y: 50 };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
+    // mark equal legs CA and CB with double ticks
+    s += equalTicks(C.x, C.y, A.x, A.y, 2);
+    s += equalTicks(C.x, C.y, B.x, B.y, 2);
+    function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    function mark(V, t1, t2, txt) {
+      const isX = (txt === 'x');
+      if (txt === '' || txt == null) return '';
+      return angleMarker(V.x, V.y, 28, dirTo(V, t1), dirTo(V, t2), isX ? 'x' : txt + '°', { unknown: isX, labelR: 46 });
+    }
+    s += mark(A, B, C, angA);
+    s += mark(B, C, A, angB);
+    s += mark(C, A, B, angC);
+    s += pointLabel(A.x - 16, A.y + 6, 'A') + pointLabel(B.x + 8, B.y + 6, 'B') + pointLabel(C.x - 6, C.y - 10, 'C');
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // 12. EQUILATERAL TRIANGLE
+  // ================================================================
+  function genEquilateral() {
+    const variant = pick(['each', 'property']);
+    if (variant === 'property') {
+      const opts = shuffle([
+        { label: 'Three equal sides and three 60° angles', value: 1, correct: true },
+        { label: 'Three equal sides but unequal angles', value: 2 },
+        { label: 'One 90° angle', value: 3 },
+        { label: 'Each angle is 90°', value: 4 }
+      ]);
+      return {
+        stem: 'Which is true for an <strong>equilateral</strong> triangle?',
+        figure: equilateralFigure(true),
+        options: opts, answerType: 'flag',
+        explain: `An equilateral triangle has <strong>three equal sides and three equal 60° angles</strong> (since 180° ÷ 3 = 60°). It contains no right angle.`
+      };
+    }
+    return {
+      stem: 'All three sides of this triangle are equal. What is the size of each angle <span style="color:#C62828">x</span>?',
+      figure: equilateralFigure(false),
+      options: numericOptions(60),
+      answer: 60, answerType: 'value',
+      explain: `An equilateral triangle has three equal angles that add to 180°, so each is <span class="calc">x = 180° ÷ 3 = 60°</span>.`
+    };
+  }
+
+  function equilateralFigure(allLabelled) {
+    const W = 340, Hh = 230;
+    const A = { x: 80, y: 185 }, B = { x: 260, y: 185 }, C = { x: 170, y: 50 };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}"/>`;
+    s += equalTicks(A.x, A.y, B.x, B.y, 1);
+    s += equalTicks(B.x, B.y, C.x, C.y, 1);
+    s += equalTicks(C.x, C.y, A.x, A.y, 1);
+    function dirTo(f, t) { return Math.atan2(t.y - f.y, t.x - f.x) * 180 / Math.PI; }
+    if (allLabelled) {
+      s += angleMarker(A.x, A.y, 26, dirTo(A, B), dirTo(A, C), '60°', { labelR: 44 });
+      s += angleMarker(B.x, B.y, 26, dirTo(B, C), dirTo(B, A), '60°', { labelR: 44 });
+      s += angleMarker(C.x, C.y, 26, dirTo(C, A), dirTo(C, B), '60°', { labelR: 44 });
+    } else {
+      s += angleMarker(A.x, A.y, 26, dirTo(A, B), dirTo(A, C), 'x', { unknown: true, labelR: 44 });
+      s += angleMarker(B.x, B.y, 26, dirTo(B, C), dirTo(B, A), 'x', { unknown: true, labelR: 44 });
+      s += angleMarker(C.x, C.y, 26, dirTo(C, A), dirTo(C, B), 'x', { unknown: true, labelR: 44 });
+    }
+    s += svgClose();
+    return s;
+  }
+
+  // ================================================================
+  // TOPIC REGISTRY
+  // ================================================================
+  const TOPICS = [
+    { id: 'rectangle', title: 'Rectangle', desc: 'Right-angle corners, equal opposite sides, equal diagonals.', icon: ICONS.rectangle, accent: ['#42A5F5', '#BBDEFB', '#1E88E5'], gen: genRectangle },
+    { id: 'square', title: 'Square', desc: 'Four equal sides, four 90° angles, diagonals at 45°.', icon: ICONS.square, accent: ['#26A69A', '#B2DFDB', '#00897B'], gen: genSquare },
+    { id: 'trapezium', title: 'Trapezium', desc: 'One pair of parallel sides; co-interior angles add to 180°.', icon: ICONS.trapezium, accent: ['#7E57C2', '#D1C4E9', '#5E35B1'], gen: genTrapezium },
+    { id: 'straightline', title: 'Angles on a Line', desc: 'Angles on a straight line add up to 180°.', icon: ICONS.lineAngle, accent: ['#FB8C00', '#FFE0B2', '#EF6C00'], gen: genStraightLine },
+    { id: 'intersecting', title: 'Intersecting Lines', desc: 'Vertically opposite angles are equal at a crossing.', icon: ICONS.intersect, accent: ['#EF5350', '#FFCDD2', '#E53935'], gen: genIntersecting },
+    { id: 'aroundpoint', title: 'Angles at a Point', desc: 'Angles around a point add up to 360°.', icon: ICONS.point, accent: ['#EC407A', '#F8BBD0', '#D81B60'], gen: genAroundPoint },
+    { id: 'parallelogram', title: 'Parallelogram', desc: 'Opposite angles equal; consecutive angles add to 180°.', icon: ICONS.parallelogram, accent: ['#66BB6A', '#C8E6C9', '#43A047'], gen: genParallelogram },
+    { id: 'rhombus', title: 'Rhombus', desc: 'Four equal sides; diagonals cross at 90° and bisect angles.', icon: ICONS.rhombus, accent: ['#5C6BC0', '#C5CAE9', '#3949AB'], gen: genRhombus },
+    { id: 'triangle', title: 'Triangle', desc: 'Interior angles add to 180°; exterior = sum of opposite two.', icon: ICONS.triangle, accent: ['#FFA726', '#FFE0B2', '#FB8C00'], gen: genTriangle },
+    { id: 'righttriangle', title: 'Right-∠ Triangle', desc: 'One 90° angle; the other two are complementary (add to 90°).', icon: ICONS.rightTri, accent: ['#29B6F6', '#B3E5FC', '#039BE5'], gen: genRightTriangle },
+    { id: 'isosceles', title: 'Isosceles Triangle', desc: 'Two equal sides; the two base angles are equal.', icon: ICONS.isoTri, accent: ['#AB47BC', '#E1BEE7', '#8E24AA'], gen: genIsosceles },
+    { id: 'equilateral', title: 'Equilateral Triangle', desc: 'Three equal sides; every angle is 60°.', icon: ICONS.equiTri, accent: ['#9CCC65', '#DCEDC8', '#7CB342'], gen: genEquilateral }
+  ];
+
+  window.__QUIZTOPICS = TOPICS;
+})();
+
+
+// ============================================================
+// QUIZ ENGINE — rendering, flow, scoring, results
+// ============================================================
+(function () {
+  'use strict';
+  const H = window.__QUIZHELP;
+  const TOPICS = window.__QUIZTOPICS;
+  const QUESTIONS_PER_QUIZ = 8;
+
+  // best scores held in memory for the session (no browser storage in artifacts)
+  const bestScores = {};
+
+  // DOM refs
+  const topicGrid = document.getElementById('topic-grid');
+  const runner = document.getElementById('quiz-runner');
+  const stage = document.getElementById('quiz-stage');
+  const backBtn = document.getElementById('quiz-back-button');
+  const runnerTitle = document.getElementById('runner-title');
+  const runnerSub = document.getElementById('runner-sub');
+  const runnerBadge = document.getElementById('runner-badge');
+  const progStrip = document.getElementById('quiz-progress-strip');
+  const progCount = document.getElementById('quiz-progress-count');
+  const progFill = document.getElementById('quiz-progress-fill');
+  const scorePill = document.getElementById('quiz-score-pill');
+
+  // current quiz state
+  let current = null;
+
+  function setAccentVars(el, accent) {
+    el.style.setProperty('--topic-accent', accent[0]);
+    el.style.setProperty('--topic-accent-light', accent[1]);
+    el.style.setProperty('--topic-accent-dark', accent[2]);
+  }
+
+  // ---- build the topic chooser cards ----
+  function renderTopicGrid() {
+    topicGrid.innerHTML = '';
+    TOPICS.forEach(topic => {
+      const card = document.createElement('button');
+      card.className = 'topic-card';
+      setAccentVars(card, topic.accent);
+      const best = bestScores[topic.id];
+      const bestTxt = best != null ? `Best ${best}/${QUESTIONS_PER_QUIZ}` : 'Not tried yet';
+      card.innerHTML = `
+        <div class="topic-card-icon">
+          <svg viewBox="0 0 24 24">${topic.icon}</svg>
+        </div>
+        <div class="topic-card-title">${topic.title}</div>
+        <div class="topic-card-desc">${topic.desc}</div>
+        <div class="topic-card-meta">
+          <span>${QUESTIONS_PER_QUIZ} questions</span>
+          <span class="topic-best" data-best="${topic.id}">${bestTxt}</span>
+        </div>`;
+      card.addEventListener('click', () => startQuiz(topic));
+      topicGrid.appendChild(card);
+    });
+  }
+
+  function updateBestLabel(topicId) {
+    const el = topicGrid.querySelector(`[data-best="${topicId}"]`);
+    if (el) {
+      const best = bestScores[topicId];
+      el.textContent = best != null ? `Best ${best}/${QUESTIONS_PER_QUIZ}` : 'Not tried yet';
+    }
+  }
+
+  // ---- start a quiz for a topic ----
+  function startQuiz(topic) {
+    const questions = [];
+    let guard = 0;
+    // generate unique-ish questions
+    while (questions.length < QUESTIONS_PER_QUIZ && guard < 200) {
+      const q = topic.gen();
+      questions.push(q);
+      guard++;
+    }
+    current = {
+      topic,
+      questions,
+      index: 0,
+      score: 0,
+      answers: [] // {correct:bool, chosenLabel, correctLabel, stem}
+    };
+
+    setAccentVars(runner, topic.accent);
+    runnerTitle.textContent = topic.title;
+    runnerSub.textContent = 'Revision quiz · ' + topic.desc;
+    runnerBadge.innerHTML = `<svg viewBox="0 0 24 24">${topic.icon}</svg>`;
+
+    topicGrid.style.display = 'none';
+    document.querySelector('.quiz-section-banner').style.display = 'none';
+    runner.classList.add('active');
+    progStrip.style.display = 'flex';
+    runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    renderQuestion();
+  }
+
+  // ---- render current question ----
+  function renderQuestion() {
+    const q = current.questions[current.index];
+    const total = current.questions.length;
+
+    progCount.textContent = (current.index + 1) + ' / ' + total;
+    progFill.style.width = (current.index / total * 100) + '%';
+    scorePill.textContent = current.score + ' correct';
+
+    const isFlag = q.answerType === 'flag';
+    const isText = isFlag || q.textOptions;
+
+    // build options HTML
+    let optsHtml = '';
+    q.options.forEach((opt, i) => {
+      const key = String.fromCharCode(65 + i); // A, B, C, D
+      const valClass = isText ? 'option-text-label' : 'option-value';
+      const display = isText ? opt.label : opt.label;
+      optsHtml += `
+        <button class="option-button" data-opt="${i}">
+          <span class="option-key">${key}</span>
+          <span class="${valClass}">${display}</span>
+          <span class="option-mark"></span>
+        </button>`;
+    });
+
+    const twoCol = (!isText && q.options.length === 4) ? 'two-col' : '';
+
+    stage.innerHTML = `
+      <div class="question-card">
+        <div class="question-stem"><span class="qnum">Q${current.index + 1}.</span>${q.stem}</div>
+        <div class="figure-stage">${q.figure}</div>
+        <div class="option-list ${twoCol}" id="option-list"></div>
+        <div class="feedback-panel" id="feedback-panel">
+          <div class="feedback-head" id="feedback-head"></div>
+          <div class="feedback-body" id="feedback-body"></div>
+        </div>
+        <div class="quiz-footer">
+          <button class="quiz-next-button" id="quiz-next-button">
+            ${current.index === total - 1 ? 'See results' : 'Next question'}
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>`;
+
+    const list = document.getElementById('option-list');
+    list.innerHTML = optsHtml;
+    list.querySelectorAll('.option-button').forEach(btn => {
+      btn.addEventListener('click', () => handleAnswer(parseInt(btn.getAttribute('data-opt'), 10)));
+    });
+
+    document.getElementById('quiz-next-button').addEventListener('click', nextQuestion);
+  }
+
+  // ---- determine correctness of an option ----
+  function isOptionCorrect(q, optIndex) {
+    const opt = q.options[optIndex];
+    if (q.answerType === 'value') return opt.value === q.answer;
+    if (q.answerType === 'flag') return !!opt.correct;
+    if (q.answerType === 'index') return optIndex === q.answer;
+    return false;
+  }
+
+  function correctLabelOf(q) {
+    if (q.answerType === 'value') {
+      const o = q.options.find(o => o.value === q.answer);
+      return o ? o.label : (q.answer + '°');
+    }
+    if (q.answerType === 'flag') {
+      const o = q.options.find(o => o.correct);
+      return o ? o.label : '';
+    }
+    if (q.answerType === 'index') return q.options[q.answer].label;
+    return '';
+  }
+
+  const TICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#43A047" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  const CROSS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+  // ---- handle an answer choice ----
+  function handleAnswer(optIndex) {
+    const q = current.questions[current.index];
+    const buttons = stage.querySelectorAll('.option-button');
+    if (buttons[optIndex].disabled) return;
+
+    const correct = isOptionCorrect(q, optIndex);
+    let correctIndex = -1;
+    q.options.forEach((o, i) => { if (isOptionCorrect(q, i)) correctIndex = i; });
+
+    buttons.forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === correctIndex) {
+        btn.classList.add('correct');
+        btn.querySelector('.option-mark').innerHTML = TICK_SVG;
+      } else if (i === optIndex && !correct) {
+        btn.classList.add('incorrect');
+        btn.querySelector('.option-mark').innerHTML = CROSS_SVG;
+      } else {
+        btn.classList.add('faded');
+      }
+    });
+
+    if (correct) {
+      current.score++;
+      scorePill.textContent = current.score + ' correct';
+    } else {
+      // gentle shake on the wrong button
+      buttons[optIndex].animate(
+        [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
+         { transform: 'translateX(6px)' }, { transform: 'translateX(-4px)' },
+         { transform: 'translateX(0)' }],
+        { duration: 320, easing: 'ease-in-out' }
+      );
+    }
+
+    // record
+    current.answers.push({
+      correct,
+      chosenLabel: q.options[optIndex].label,
+      correctLabel: correctLabelOf(q),
+      stem: stripHtml(q.stem)
+    });
+
+    // feedback panel
+    const panel = document.getElementById('feedback-panel');
+    const head = document.getElementById('feedback-head');
+    const body = document.getElementById('feedback-body');
+    panel.classList.add(correct ? 'correct' : 'incorrect');
+    head.innerHTML = (correct ? TICK_SVG : CROSS_SVG) +
+      `<span style="margin-left:4px">${correct ? 'Correct!' : 'Not quite'}</span>`;
+    head.querySelector('svg').style.width = '20px';
+    head.querySelector('svg').style.height = '20px';
+    body.innerHTML = q.explain;
+    setTimeout(() => panel.classList.add('show'), 120);
+
+    // enable next
+    const nextBtn = document.getElementById('quiz-next-button');
+    nextBtn.classList.add('ready');
+  }
+
+  function stripHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  // ---- advance ----
+  function nextQuestion() {
+    if (current.index < current.questions.length - 1) {
+      current.index++;
+      renderQuestion();
+      runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      showResults();
+    }
+  }
+
+  // ---- results screen ----
+  function showResults() {
+    const total = current.questions.length;
+    const score = current.score;
+    const pct = Math.round(score / total * 100);
+
+    progCount.textContent = total + ' / ' + total;
+    progFill.style.width = '100%';
+
+    // update best
+    if (bestScores[current.topic.id] == null || score > bestScores[current.topic.id]) {
+      bestScores[current.topic.id] = score;
+    }
+
+    let message, detail;
+    if (pct === 100) { message = 'Perfect! 🎉'; detail = `You answered all ${total} questions on ${current.topic.title} correctly. You clearly know this property inside out.`; }
+    else if (pct >= 75) { message = 'Great work!'; detail = `You scored ${score} out of ${total} on ${current.topic.title}. Just a little polish on the ones you missed and you'll have it nailed.`; }
+    else if (pct >= 50) { message = 'Good start'; detail = `You scored ${score} out of ${total} on ${current.topic.title}. Review the explanations below, then try again to push your score up.`; }
+    else { message = 'Keep practising'; detail = `You scored ${score} out of ${total} on ${current.topic.title}. Look over the worked answers below — the rule is the same each time, so a retry should go much better.`; }
+
+    const radius = 66;
+    const circ = 2 * Math.PI * radius;
+    const offset = circ * (1 - score / total);
+
+    let reviewHtml = '';
+    current.answers.forEach((a, i) => {
+      reviewHtml += `
+        <div class="review-row">
+          <span class="review-icon ${a.correct ? 'ok' : 'no'}">${a.correct ? TICK_SVG : CROSS_SVG}</span>
+          <span class="review-text">
+            <strong>Q${i + 1}.</strong> ${a.stem}
+            ${a.correct
+              ? `<br><span class="ans-num">Your answer: ${a.chosenLabel} ✓</span>`
+              : `<br><span class="ans-num">You chose ${a.chosenLabel} · correct answer: <strong>${a.correctLabel}</strong></span>`}
+          </span>
+        </div>`;
+    });
+
+    stage.innerHTML = `
+      <div class="quiz-results">
+        <div class="results-ring-wrap">
+          <svg viewBox="0 0 160 160" width="160" height="160">
+            <circle class="results-ring-bg" cx="80" cy="80" r="${radius}"></circle>
+            <circle class="results-ring-fill" cx="80" cy="80" r="${radius}"
+              stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${circ.toFixed(1)}" id="ring-fill"></circle>
+          </svg>
+          <div class="results-percent">
+            <span class="pct-num" id="pct-num">0%</span>
+            <span class="pct-frac">${score} / ${total}</span>
+          </div>
+        </div>
+        <div class="results-message">${message}</div>
+        <div class="results-detail">${detail}</div>
+        <div class="results-actions">
+          <button class="quiz-next-button ready" id="retry-button" style="background:var(--topic-accent)">
+            Try again
+          </button>
+          <button class="quiz-back-button" id="results-back-button">Choose another topic</button>
+        </div>
+        <div class="results-review">
+          <h4>Question review</h4>
+          ${reviewHtml}
+        </div>
+      </div>`;
+
+    // animate ring + counter
+    requestAnimationFrame(() => {
+      const ring = document.getElementById('ring-fill');
+      if (ring) ring.style.strokeDashoffset = offset.toFixed(1);
+      animateCount(document.getElementById('pct-num'), 0, pct, 900);
+    });
+
+    if (pct >= 75) launchConfetti(current.topic.accent);
+
+    document.getElementById('retry-button').addEventListener('click', () => startQuiz(current.topic));
+    document.getElementById('results-back-button').addEventListener('click', goToTopics);
+
+    updateBestLabel(current.topic.id);
+    runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function animateCount(el, from, to, dur) {
+    if (!el) return;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(from + (to - from) * eased) + '%';
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ---- confetti ----
+  function launchConfetti(accent) {
+    const colors = [accent[0], accent[2], '#FFD54F', '#66BB6A', '#42A5F5', '#EF9A9A'];
+    const count = 70;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      const dur = 2.2 + Math.random() * 1.8;
+      const delay = Math.random() * 0.6;
+      piece.style.animation = `confettiFall ${dur}s ${delay}s ease-in forwards`;
+      piece.style.transform = `rotateZ(${Math.random() * 360}deg)`;
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), (dur + delay) * 1000 + 200);
+    }
+  }
+
+  // ---- navigation back to topic grid ----
+  function goToTopics() {
+    runner.classList.remove('active');
+    progStrip.style.display = 'none';
+    topicGrid.style.display = 'grid';
+    document.querySelector('.quiz-section-banner').style.display = 'block';
+    current = null;
+    document.getElementById('quiz-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  backBtn.addEventListener('click', goToTopics);
+
+  // ---- init ----
+  renderTopicGrid();
+})();
+
+</script>
+</body>
+</html>
