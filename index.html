@@ -4535,7 +4535,7 @@ updateStatus();
   // 8. RHOMBUS
   // ================================================================
   function genRhombus() {
-    const variant = pick(['opposite', 'consecutive', 'diagonal', 'property']);
+    const variant = pick(['opposite', 'consecutive', 'diagonal', 'property', 'splitshape', 'splitbase']);
     const a = randInt(50, 130);
     if (variant === 'property') {
       const opts = shuffle([
@@ -4558,6 +4558,31 @@ updateStatus();
         options: numericOptions(90),
         answer: 90, answerType: 'value',
         explain: `The diagonals of a rhombus are <strong>perpendicular</strong> — they always cross at <span class="calc">x = 90°</span>.`
+      };
+    }
+    if (variant === 'splitshape') {
+      const opts = shuffle([
+        { label: 'Two congruent isosceles triangles', value: 1, correct: true },
+        { label: 'Two congruent right-angled triangles', value: 2 },
+        { label: 'Two congruent equilateral triangles', value: 3 },
+        { label: 'Two triangles of different sizes', value: 4 }
+      ]);
+      return {
+        stem: 'A single <strong>diagonal</strong> of this rhombus is drawn. What two triangles does it split the rhombus into?',
+        figure: rhombusSplitFigure(74, 'concept'),
+        options: opts, answerType: 'flag',
+        explain: `Two sides of each triangle are sides of the rhombus, so they are <strong>equal</strong> — making each triangle <strong>isosceles</strong>. The two triangles share the diagonal and have three pairs of equal sides, so they are <strong>congruent</strong> (identical). In general they are not right-angled or equilateral.`
+      };
+    }
+    if (variant === 'splitbase') {
+      const apex = randInt(20, 70) * 2; // even apex angle 40–140 so base angle is whole
+      const x = (180 - apex) / 2;
+      return {
+        stem: `A diagonal splits this rhombus into two congruent <strong>isosceles</strong> triangles. The apex angle of a triangle is <strong>${apex}°</strong>. Find each equal <strong>base angle</strong> <span style="color:#C62828">x</span>.`,
+        figure: rhombusSplitFigure(apex, 'base'),
+        options: numericOptions(x),
+        answer: x, answerType: 'value',
+        explain: `The two sides meeting at the apex are sides of the rhombus, so the triangle is <strong>isosceles</strong> and its two base angles are equal. Angles in a triangle add to 180°, so <span class="calc">x = (180° − ${apex}°) ÷ 2 = ${x}°</span>.`
       };
     }
     if (variant === 'consecutive') {
@@ -4637,6 +4662,45 @@ updateStatus();
     s += `<line class="fig-line-secondary" x1="${v.left.x}" y1="${v.left.y}" x2="${v.right.x}" y2="${v.right.y}"/>`;
     s += rightAngleMark(cx, cy, -90, 0, 14);
     s += `<text class="fig-angle-unknown" x="${cx+24}" y="${cy-18}" text-anchor="middle" dominant-baseline="central">x</text>`;
+    s += svgClose();
+    return s;
+  }
+
+  // a rhombus with ONE diagonal drawn, splitting it into two congruent isosceles
+  // triangles. Built so the left-vertex (apex) angle equals `a`.
+  function rhombusSplitFigure(a, mode) {
+    const W = 360, Hh = 250;
+    const side = 130, half = (a / 2) * Math.PI / 180;
+    const hx = side * Math.cos(half), hy = side * Math.sin(half);
+    const pm = {
+      left: { x: 0, y: 0 },
+      top: { x: hx, y: hy },
+      right: { x: 2 * hx, y: 0 },
+      bottom: { x: hx, y: -hy }
+    };
+    const xs = [0, 2 * hx], ys = [hy, -hy];
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const scale = Math.min(250 / (maxX - minX), 170 / (maxY - minY));
+    const dW = (maxX - minX) * scale, dH = (maxY - minY) * scale;
+    const offX = (W - dW) / 2, offY = (Hh - dH) / 2;
+    const map = p => ({ x: offX + (p.x - minX) * scale, y: offY + (maxY - p.y) * scale });
+    const v = { top: map(pm.top), right: map(pm.right), bottom: map(pm.bottom), left: map(pm.left) };
+    let s = svgOpen(W, Hh);
+    s += `<polygon class="fig-shape" points="${v.top.x},${v.top.y} ${v.right.x},${v.right.y} ${v.bottom.x},${v.bottom.y} ${v.left.x},${v.left.y}"/>`;
+    // the splitting diagonal (top to bottom)
+    s += `<line class="fig-line-secondary" x1="${v.top.x}" y1="${v.top.y}" x2="${v.bottom.x}" y2="${v.bottom.y}"/>`;
+    // all four sides equal (single tick) — this is what makes each half isosceles
+    s += equalTicks(v.left.x, v.left.y, v.top.x, v.top.y, 1);
+    s += equalTicks(v.top.x, v.top.y, v.right.x, v.right.y, 1);
+    s += equalTicks(v.right.x, v.right.y, v.bottom.x, v.bottom.y, 1);
+    s += equalTicks(v.bottom.x, v.bottom.y, v.left.x, v.left.y, 1);
+    function dirTo(from, to) { return Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI; }
+    if (mode === 'base') {
+      // apex angle a at the left vertex (where the two equal sides meet)
+      s += angleMarker(v.left.x, v.left.y, 26, dirTo(v.left, v.top), dirTo(v.left, v.bottom), a + '°', { labelR: 42 });
+      // unknown base angle x at the top vertex, between the diagonal and the side
+      s += angleMarker(v.top.x, v.top.y, 24, dirTo(v.top, v.bottom), dirTo(v.top, v.left), 'x', { unknown: true, labelR: 38 });
+    }
     s += svgClose();
     return s;
   }
